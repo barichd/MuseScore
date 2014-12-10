@@ -15,9 +15,7 @@
 #include "piano.h"
 #include "ruler.h"
 #include "pianoview.h"
-#include "libmscore/score.h"
 #include "libmscore/staff.h"
-#include "libmscore/score.h"
 #include "libmscore/measure.h"
 #include "libmscore/note.h"
 #include "awl/pitchlabel.h"
@@ -50,7 +48,7 @@ PianorollEditor::PianorollEditor(QWidget* parent)
       staff    = 0;
 
       QWidget* mainWidget = new QWidget;
-      QToolBar* tb = addToolBar(tr("toolbar 1"));
+      QToolBar* tb = addToolBar(tr("Toolbar 1"));
       tb->addAction(getAction("undo"));
       tb->addAction(getAction("redo"));
       tb->addSeparator();
@@ -71,14 +69,14 @@ PianorollEditor::PianorollEditor(QWidget* parent)
       tb->addAction(getAction("metronome"));
 
       showWave = new QAction(tr("Wave"), tb);
-      showWave->setToolTip(tr("show wave display"));
+      showWave->setToolTip(tr("Show wave display"));
       showWave->setCheckable(true);
       showWave->setChecked(false);
       connect(showWave, SIGNAL(toggled(bool)), SLOT(showWaveView(bool)));
       tb->addAction(showWave);
 
       //-------------
-      tb = addToolBar(tr("toolbar 2"));
+      tb = addToolBar(tr("Toolbar 2"));
       for (int i = 0; i < VOICES; ++i) {
             QToolButton* b = new QToolButton(this);
             b->setToolButtonStyle(Qt::ToolButtonTextOnly);
@@ -103,8 +101,8 @@ PianorollEditor::PianorollEditor(QWidget* parent)
       tb->addSeparator();
       tb->addWidget(new QLabel(tr("Velocity:")));
       veloType = new QComboBox;
-      veloType->addItem(tr("offset"), int(Note::ValueType::OFFSET_VAL));
-      veloType->addItem(tr("user"),   int (Note::ValueType::USER_VAL));
+      veloType->addItem(tr("Offset"), int(Note::ValueType::OFFSET_VAL));
+      veloType->addItem(tr("User"),   int (Note::ValueType::USER_VAL));
       tb->addWidget(veloType);
 
       velocity = new QSpinBox;
@@ -248,7 +246,7 @@ void PianorollEditor::setStaff(Staff* st)
             }
       staff = st;
       if (staff) {
-            setWindowTitle(QString(tr("MuseScore: <%1> Staff: %2")).arg(_score->name()).arg(st->idx()));
+            setWindowTitle(tr("MuseScore: <%1> Staff: %2").arg(_score->name()).arg(st->idx()));
             TempoMap* tl = _score->tempomap();
             TimeSigMap*  sl = _score->sigmap();
             for (int i = 0; i < 3; ++i)

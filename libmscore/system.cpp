@@ -219,12 +219,12 @@ void System::layout(qreal xo1)
       // xoff2 += xo1;
       _leftMargin = xoff2;
 
+
       qreal bd = point(score()->styleS(StyleIdx::bracketDistance));
       if ( _brackets.size() > 0) {
             for (int i = 0; i < bracketLevels; ++i)
                   _leftMargin += bracketWidth[i] + bd;
             }
-
 
       for (int staffIdx = 0; staffIdx < nstaves; ++staffIdx) {
             SysStaff* s  = _staves[staffIdx];
@@ -400,9 +400,8 @@ void System::layout2()
       if (_barLine) {
             _barLine->setTrack(firstStaffIdx * VOICES);
             _barLine->setSpan(lastStaffIdx - firstStaffIdx + 1);
-            if (score()->staff(0)->lines() == 1)
+            if (score()->staff(firstStaffIdx)->lines() == 1)
                   _barLine->setSpanFrom(BARLINE_SPAN_1LINESTAFF_FROM);
-
             int spanTo = (score()->staff(lastStaffIdx)->lines() == 1) ?
                               BARLINE_SPAN_1LINESTAFF_TO :
                               (score()->staff(lastStaffIdx)->lines()-1)*2;
@@ -839,17 +838,16 @@ static Lyrics* searchNextLyrics(Segment* s, int staffIdx, int verse)
       while ((s = s->next1(Segment::Type::ChordRest))) {
             int strack = staffIdx * VOICES;
             int etrack = strack + VOICES;
-            QList<Lyrics*>* nll = 0;
+            // search through all tracks of current staff looking for a lyric in specified verse
             for (int track = strack; track < etrack; ++track) {
                   ChordRest* cr = static_cast<ChordRest*>(s->element(track));
                   if (cr && !cr->lyricsList().isEmpty()) {
-                        nll = &cr->lyricsList();
-                        break;
+                        // cr with lyrics found, but does it have a syllable in specified verse?
+                        l = cr->lyricsList().value(verse);
+                        if (l)
+                              break;
                         }
                   }
-            if (!nll)
-                  continue;
-            l = nll->value(verse);
             if (l)
                   break;
             }
@@ -905,6 +903,10 @@ void System::layoutLyrics(Lyrics* l, Segment* s, int staffIdx)
                         // single segment
                         qreal headWidth = score()->noteHeadWidth();
                         qreal len = seg->pagePos().x() - l->pagePos().x() - x1 + headWidth;
+                        if (len <= 0.0) {
+                              l->clearSeparator();
+                              return;
+                              }
                         line->setLen(Spatium(len / _spatium));
                         Lyrics* nl = searchNextLyrics(seg, staffIdx, l->no());
                         // small correction if next lyrics is moved? not needed if on another system
@@ -944,15 +946,16 @@ qDebug("Lyrics: melisma end segment not implemented");
       Segment* ns = s;
 
       // TODO: the next two values should be style parameters
-      // TODO: as well as the 0.3 factor a few lines below
-      const qreal maxl = 0.5 * _spatium * lmag * staffMag;   // lyrics hyphen length
-      const Spatium hlw(0.14 * lmag * staffMag);              // hyphen line width
+      // TODO: as well as the factor a few lines below
+      const qreal maxl = 0.5 * _spatium * lmag * staffMag;  // lyrics hyphen length
+      const Spatium hlw(0.14 * lmag * staffMag);            // hyphen line width
 
       Lyrics* nl = searchNextLyrics(ns, staffIdx, verse);
       if (!nl) {
             l->clearSeparator();
             return;
             }
+      ns = nl->chordRest()->segment();
       QList<Line*>* sl = l->separatorList();
       Line* line;
       if (sl->isEmpty()) {
@@ -965,16 +968,25 @@ qDebug("Lyrics: melisma end segment not implemented");
       qreal x = l->bbox().right();
       // convert font size to raster units, scaling if spatium-dependent
       qreal size = ts.size();
-      if(ts.sizeIsSpatiumDependent())
-            size *= _spatium / (SPATIUM20 * PPI);    // <= (MScore::DPI / PPI) * (_spatium / (SPATIUM20 * Mscore::DPI))
+      if (ts.sizeIsSpatiumDependent())
+            size *= _spatium / (SPATIUM20 * PPI);     // <= (MScore::DPI / PPI) * (_spatium / (SPATIUM20 * Mscore::DPI))
       else
             size *= MScore::DPI / PPI;
-      qreal y = -size * staffMag * 0.3;                    // a conventional percentage of the whole font height
+      qreal y = -size * staffMag * 0.30;              // TODO: make this a style parameter (for now, a conventional percentage of the whole font height)
 
       qreal x1 = x + l->pagePos().x();
       qreal x2 = nl->bbox().left() + nl->pagePos().x();
       qreal len;
-      if (x2 < x1 || s->measure()->system()->page() != ns->measure()->system()->page()) {
+      if (x2 < x1 && s->measure()->system() == ns->measure()->system()) {
+            // first syllable overlaps second
+            // no separator needed
+            l->clearSeparator();
+            return;
+            }
+      else if (s->measure()->system() != ns->measure()->system()) {
+            // second syllable not on same system as first (perhaps not even same page)
+            // use right edge of first system as substitute for second syllable
+            // so hyphen is centered within the space remaining on system
             System* system = s->measure()->system();
             x2 = system->pagePos().x() + system->bbox().width();
             }
@@ -1069,8 +1081,9 @@ qreal System::staffYpage(int staffIdx) const
 void System::write(Xml& xml) const
       {
       xml.stag("System");
-      if (_barLine && !_barLine->generated())
-            _barLine->write(xml);
+      // bar line is always generated
+//      if (_barLine && !_barLine->generated())
+//            _barLine->write(xml);
       xml.etag();
       }
 
@@ -1084,10 +1097,14 @@ void System::read(XmlReader& e)
             const QStringRef& tag(e.name());
 
             if (tag == "BarLine") {
-                  _barLine = new BarLine(score());
-                  _barLine->read(e);
-                  _barLine->setTrack(0);
-                  _barLine->setParent(this);
+//                  _barLine = new BarLine(score());
+//                  _barLine->read(e);
+//                  _barLine->setTrack(0);
+//                  _barLine->setParent(this);
+                  // read the bar line for backward compatibility, but ignore it
+                  BarLine* bl = new BarLine(score());
+                  bl->read(e);
+                  delete bl;
                   }
             else
                   e.unknown();

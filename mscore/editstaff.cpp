@@ -24,6 +24,7 @@
 #include "editpitch.h"
 #include "editstafftype.h"
 #include "editstringdata.h"
+#include "icons.h"
 #include "libmscore/instrtemplate.h"
 #include "libmscore/measure.h"
 #include "libmscore/part.h"
@@ -51,6 +52,12 @@ EditStaff::EditStaff(Staff* s, QWidget* parent)
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
       setModal(true);
+      
+      const QIcon &editIcon = *icons[int(Icons::edit_ICON)];
+      minPitchASelect->setIcon(editIcon);
+      maxPitchASelect->setIcon(editIcon);
+      minPitchPSelect->setIcon(editIcon);
+      maxPitchPSelect->setIcon(editIcon);
 
       Part* part        = orgStaff->part();
       instrument        = *part->instr();
@@ -258,13 +265,13 @@ void EditStaff::apply()
                   score->transpositionChanged(part);
             }
 
-      if (s != staff->small()
-         || inv != staff->invisible()
-         || userDist != staff->userDist()
-         || col != staff->color()
-         || nhide != staff->neverHide()
-         || ifEmpty != staff->showIfEmpty()
-         || scale != staff->userMag()
+      if (s != orgStaff->small()
+         || inv != orgStaff->invisible()
+         || userDist != orgStaff->userDist()
+         || col != orgStaff->color()
+         || nhide != orgStaff->neverHide()
+         || ifEmpty != orgStaff->showIfEmpty()
+         || scale != orgStaff->userMag()
          ) {
             score->undo(new ChangeStaff(orgStaff, s, inv, userDist * score->spatium(), col, nhide, ifEmpty, scale));
             }

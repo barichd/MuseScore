@@ -43,8 +43,8 @@ namespace Ms {
 
 extern void populateIconPalette(Palette* p, const IconAction* a);
 extern Palette* newKeySigPalette();
-extern Palette* newBarLinePalette();
-extern Palette* newLinesPalette();
+extern Palette* newBarLinePalette(bool);
+extern Palette* newLinesPalette(bool);
 extern Palette* newAccidentalsPalette();
 
 //---------------------------------------------------------
@@ -56,13 +56,12 @@ void MuseScore::showMasterPalette(const QString& s)
       QAction* a = getAction("masterpalette");
 
       if (masterPalette == 0) {
-            masterPalette = new MasterPalette(0);
+            masterPalette = new MasterPalette(this);
             connect(masterPalette, SIGNAL(closed(bool)), a, SLOT(setChecked(bool)));
             }
       masterPalette->setVisible(a->isChecked());
       if (!s.isEmpty())
             masterPalette->selectItem(s);
-      masterPalette->show();
       }
 
 //---------------------------------------------------------
@@ -113,27 +112,30 @@ void MasterPalette::addPalette(Palette* sp)
 //---------------------------------------------------------
 
 MasterPalette::MasterPalette(QWidget* parent)
-   : QWidget(parent)
+   : QWidget(parent, Qt::Dialog)
       {
       setupUi(this);
+      setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+      setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
 
-      addPalette(MuseScore::newGraceNotePalette());
-      addPalette(MuseScore::newClefsPalette());
-      stack->addWidget(new KeyEditor);
+      addPalette(MuseScore::newGraceNotePalette(false));
+      addPalette(MuseScore::newClefsPalette(false));
+      keyEditor = new KeyEditor;
+      stack->addWidget(keyEditor);
 
       timeDialog = new TimeDialog;
       stack->addWidget(timeDialog);
 
-      addPalette(MuseScore::newBarLinePalette());
-      addPalette(MuseScore::newLinesPalette());
+      addPalette(MuseScore::newBarLinePalette(false));
+      addPalette(MuseScore::newLinesPalette(false));
       addPalette(MuseScore::newArpeggioPalette());
       addPalette(MuseScore::newBreathPalette());
       addPalette(MuseScore::newBracketsPalette());
-      addPalette(MuseScore::newArticulationsPalette());
+      addPalette(MuseScore::newArticulationsPalette(false));
 
-      addPalette(MuseScore::newAccidentalsPalette());
+      addPalette(MuseScore::newAccidentalsPalette(false));
 
-      addPalette(MuseScore::newDynamicsPalette(true));
+      addPalette(MuseScore::newDynamicsPalette(false, true));
       addPalette(MuseScore::newFingeringPalette());
       addPalette(MuseScore::newNoteHeadsPalette());
       addPalette(MuseScore::newTremoloPalette());
@@ -142,7 +144,7 @@ MasterPalette::MasterPalette(QWidget* parent)
       addPalette(MuseScore::newTextPalette());
       addPalette(MuseScore::newBreaksPalette());
       addPalette(MuseScore::newBagpipeEmbellishmentPalette());
-      addPalette(MuseScore::newBeamPalette());
+      addPalette(MuseScore::newBeamPalette(false));
       addPalette(MuseScore::newFramePalette());
 
       stack->addWidget(new SymbolDialog);
@@ -156,6 +158,8 @@ void MasterPalette::closeEvent(QCloseEvent* ev)
       {
       if (timeDialog->dirty())
             timeDialog->save();
+      if (keyEditor->dirty())
+            keyEditor->save();
       emit closed(false);
       QWidget::closeEvent(ev);
       }

@@ -59,6 +59,7 @@ enum class TEXT : char {
       SUBTITLE,
       COMPOSER,
       POET,
+      PART,
       SYSTEM,
       STAFF,
       REHEARSAL_MARK
@@ -210,7 +211,7 @@ class ScoreView : public QWidget, public MuseScoreView {
 
       void setShadowNote(const QPointF&);
       void drawElements(QPainter& p,const QList<Element*>& el);
-      bool dragTimeAnchorElement(const QPointF& pos);
+      void dragTimeAnchorElement(const QPointF& pos);
       void dragSymbol(const QPointF& pos);
       bool dragMeasureAnchorElement(const QPointF& pos);
       void updateGrips();
@@ -290,10 +291,12 @@ class ScoreView : public QWidget, public MuseScoreView {
       void deselectAll();
 
       void editCopy();
+      void editCut();
       void editPaste();
 
       void normalCut();
       void normalCopy();
+      void fotoModeCopy();
       void normalPaste();
 
       void cloneElement(Element* e);
@@ -407,6 +410,8 @@ class ScoreView : public QWidget, public MuseScoreView {
       void cmdAppendMeasures(int, Element::Type);
       void cmdInsertMeasures(int, Element::Type);
 
+      void cmdAddRemoveBreaks();
+
       ScoreState mscoreState() const;
       void setCursorVisible(bool v);
       void showOmr(bool flag);
@@ -418,7 +423,7 @@ class ScoreView : public QWidget, public MuseScoreView {
 
       virtual void layoutChanged();
       virtual void dataChanged(const QRectF&);
-      virtual void updateAll();
+      virtual void updateAll()    { update(); }
       virtual void adjustCanvasPosition(const Element* el, bool playBack);
       virtual void setCursor(const QCursor& c) { QWidget::setCursor(c); }
       virtual QCursor cursor() const { return QWidget::cursor(); }

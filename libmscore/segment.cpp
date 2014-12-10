@@ -490,7 +490,7 @@ void Segment::add(Element* el)
                   checkElement(el, track);
                   _elist[track] = el;
                   if (!el->generated())
-                        el->staff()->setKey(tick(), static_cast<KeySig*>(el)->key());
+                        el->staff()->setKey(tick(), static_cast<KeySig*>(el)->keySigEvent());
                   empty = false;
                   break;
 
@@ -549,17 +549,18 @@ void Segment::remove(Element* el)
                   break;
 
             case Element::Type::DYNAMIC:
-            case Element::Type::HARMONY:
-            case Element::Type::SYMBOL:
-            case Element::Type::FRET_DIAGRAM:
-            case Element::Type::TEMPO_TEXT:
-            case Element::Type::STAFF_TEXT:
-            case Element::Type::REHEARSAL_MARK:
-            case Element::Type::MARKER:
-            case Element::Type::IMAGE:
-            case Element::Type::TEXT:
-            case Element::Type::TAB_DURATION_SYMBOL:
             case Element::Type::FIGURED_BASS:
+            case Element::Type::FRET_DIAGRAM:
+            case Element::Type::HARMONY:
+            case Element::Type::IMAGE:
+            case Element::Type::MARKER:
+            case Element::Type::REHEARSAL_MARK:
+            case Element::Type::STAFF_TEXT:
+            case Element::Type::SYMBOL:
+            case Element::Type::TAB_DURATION_SYMBOL:
+            case Element::Type::TEMPO_TEXT:
+            case Element::Type::TEXT:
+            case Element::Type::TREMOLOBAR:
                   removeAnnotation(el);
                   break;
 
@@ -1222,6 +1223,20 @@ QString Segment::accessibleExtraInfo()
                   endSpanners += tr("End of ") + s->accessibleInfo();
             }
       return rez + " " + startSpanners + " " + endSpanners;
+      }
+
+ //--------------------------------------------------------
+ //   qmlAnnotations
+ //--------------------------------------------------------
+
+QQmlListProperty<Ms::Element> Segment::qmlAnnotations()
+      {
+      _qmlAnnotations.clear();
+      for (std::vector<Element*>::iterator it = _annotations.begin();
+           it != _annotations.end(); ++it) {
+            _qmlAnnotations.append(*it);
+            }
+      return QQmlListProperty<Ms::Element>(this, _qmlAnnotations);
       }
 
 }           // namespace Ms

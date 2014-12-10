@@ -142,6 +142,7 @@ Seq::Seq()
       cv              = 0;
       tackRest        = 0;
       tickRest        = 0;
+      maxMidiOutPort  = 0;
 
       endTick  = 0;
       state    = Transport::STOP;
@@ -228,6 +229,7 @@ bool Seq::init(bool hotPlug)
       {
       if (!_driver || !_driver->start(hotPlug)) {
             qDebug("Cannot start I/O");
+            running = false;
             return false;
             }
       running = true;
@@ -512,6 +514,23 @@ void Seq::playEvent(const NPlayEvent& event, unsigned framePos)
       }
 
 //---------------------------------------------------------
+//   recomputeMaxMidiOutPort
+//   Computes the maximum number of midi out ports
+//   in all opened scores
+//---------------------------------------------------------
+
+void Seq::recomputeMaxMidiOutPort() {
+      if (!(preferences.useJackMidi || preferences.useAlsaAudio))
+            return;
+      int max = 0;
+      foreach(Score * s, mscoreCore->scores()) {
+            if (s->midiPortCount() > max)
+                  max = s->midiPortCount();
+            }
+      maxMidiOutPort = max;
+      }
+
+//---------------------------------------------------------
 //   processMessages
 //   from gui to process thread
 //---------------------------------------------------------
@@ -530,13 +549,13 @@ void Seq::processMessages()
                         if (playTime != 0) {
                               int utick = cs->utime2utick(qreal(playTime) / qreal(MScore::sampleRate));
                               cs->tempomap()->setRelTempo(msg.realVal);
-                              cs->repeatList()->update();
                               playTime = cs->utick2utime(utick) * MScore::sampleRate;
                               if (preferences.jackTimebaseMaster && preferences.useJackTransport)
                                     _driver->seekTransport(utick + 2 * cs->utime2utick(qreal((_driver->bufferSize()) + 1) / qreal(MScore::sampleRate)));
                               }
                         else
                               cs->tempomap()->setRelTempo(msg.realVal);
+                        cs->repeatList()->update();
                         prevTempo = curTempo();
                         emit tempoChanged();
                         }
@@ -677,6 +696,7 @@ void Seq::process(unsigned n, float* buffer)
       Transport driverState = _driver->getState();
       // Checking for the reposition from JACK Transport
       _driver->checkTransportSeek(playTime, frames, inCountIn);
+
       if (driverState != state) {
             // Got a message from JACK Transport panel: Play
             if (state == Transport::STOP && driverState == Transport::PLAY) {
@@ -741,7 +761,7 @@ void Seq::process(unsigned n, float* buffer)
                      state, driverState);
             }
 
-      memset(buffer, 0, sizeof(float) * n * 2);
+      memset(buffer, 0, sizeof(float) * n * 2); // assume two channels
       float* p = buffer;
 
       processMessages();
@@ -931,6 +951,17 @@ void Seq::process(unsigned n, float* buffer)
 
 void Seq::initInstruments(bool realTime)
       {
+      // Add midi out ports if necessary
+      if (cs && (preferences.useJackMidi || preferences.useAlsaAudio)) {
+            // Increase the maximum number of midi ports if user adds staves/instruments
+            int scoreMaxMidiPort = cs->midiPortCount();
+            if (maxMidiOutPort < scoreMaxMidiPort)
+                  maxMidiOutPort = scoreMaxMidiPort;
+            // if maxMidiOutPort is equal to existing ports number, it will do nothing
+            if (_driver)
+                  _driver->updateOutPortCount(maxMidiOutPort + 1);
+            }
+
       foreach(const MidiMapping& mm, *cs->midiMapping()) {
             Channel* channel = mm.articulation;
             foreach(const MidiCoreEvent& e, channel->init) {
@@ -1131,25 +1162,20 @@ void Seq::stopNoteTimer()
 
 void Seq::stopNotes(int channel, bool realTime)
       {
-      auto send = [this, realTime](const NPlayEvent& event) {
-            if (realTime)
-                  putEvent(event);
-            else
-                  sendEvent(event);
-            };
-
       // Stop notes in all channels
       if (channel == -1) {
             for(int ch = 0; ch < cs->midiMapping()->size(); ch++) {
-                  send(NPlayEvent(ME_CONTROLLER, ch, CTRL_SUSTAIN, 0));
-                  for(int i = 0; i < 128; i++)
-                        send(NPlayEvent(ME_NOTEOFF, ch, i, 0));
+                  if (realTime)
+                        putEvent(NPlayEvent(ME_CONTROLLER, ch, CTRL_ALL_SOUNDS_OFF, 0));
+                  else
+                        sendEvent(NPlayEvent(ME_CONTROLLER, ch, CTRL_ALL_SOUNDS_OFF, 0));
                   }
             }
       else {
-            send(NPlayEvent(ME_CONTROLLER, channel, CTRL_SUSTAIN, 0));
-            for(int i = 0; i < 128; i++)
-                  send(NPlayEvent(ME_NOTEOFF, channel, i, 0));
+            if (realTime)
+                  putEvent(NPlayEvent(ME_CONTROLLER, channel, CTRL_ALL_SOUNDS_OFF, 0));
+            else
+                  sendEvent(NPlayEvent(ME_CONTROLLER, channel, CTRL_ALL_SOUNDS_OFF, 0));
             }
       if (preferences.useAlsaAudio || preferences.useJackAudio || preferences.usePulseAudio || preferences.usePortaudioAudio)
             _synti->allNotesOff(channel);
@@ -1363,7 +1389,7 @@ void Seq::putEvent(const NPlayEvent& event, unsigned framePos)
             }
       int syntiIdx= _synti->index(cs->midiMapping(channel)->articulation->synti);
       _synti->play(event, syntiIdx);
-      if (preferences.useJackMidi && _driver != 0)
+      if (_driver != 0 && (preferences.useJackMidi || preferences.useAlsaAudio))
             _driver->putEvent(event, framePos);
       }
 
@@ -1461,14 +1487,18 @@ void Seq::heartBeatTimeout()
 //   updateSynthesizerState
 //    collect all controller events between tick1 and tick2
 //    and send them to the synthesizer
+//    Called from RT thread
 //---------------------------------------------------------
 
 void Seq::updateSynthesizerState(int tick1, int tick2)
       {
       if (tick1 > tick2)
             tick1 = 0;
-      EventMap::const_iterator i1 = events.lower_bound(tick1);
-      EventMap::const_iterator i2 = events.upper_bound(tick2);
+      // Making a local copy of events to avoid touching it
+      // from different threads at the same time
+      EventMap ev = events;
+      EventMap::const_iterator i1 = ev.lower_bound(tick1);
+      EventMap::const_iterator i2 = ev.upper_bound(tick2);
 
       for (; i1 != i2; ++i1) {
             if (i1->second.type() == ME_CONTROLLER)
@@ -1519,6 +1549,9 @@ void Seq::setLoopOut()
             tick = cs->pos() + cs->inputState().ticks();   // Otherwise, use the selected note.
       if (tick <= cs->loopInTick())   // If Out pos <= In pos, reset In pos to beginning of score
             cs->setPos(POS::LEFT, 0);
+      else
+          if (tick > cs->lastMeasure()->endTick() - 1)
+              tick = cs->lastMeasure()->endTick() - 1;
       cs->setPos(POS::RIGHT, tick);
       if (state == Transport::PLAY)
             guiToSeq(SeqMsg(SeqMsgId::SEEK, tick));

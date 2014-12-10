@@ -134,7 +134,12 @@ void TestParts::createParts(Score* score)
       QList<Part*> parts;
       parts.append(score->parts().at(0));
       Score* nscore = new Score(score);
-      ::createExcerpt(nscore, parts);
+
+      Excerpt ex(score);
+      ex.setPartScore(nscore);
+      ex.setTitle(parts.front()->longName());
+      ex.setParts(parts);
+      ::createExcerpt(&ex);
       QVERIFY(nscore);
 
       nscore->setName(parts.front()->partName());
@@ -147,7 +152,10 @@ void TestParts::createParts(Score* score)
       parts.clear();
       parts.append(score->parts().at(1));
       nscore = new Score(score);
-      ::createExcerpt(nscore, parts);
+      ex.setTitle(parts.front()->longName());
+      ex.setPartScore(nscore);
+      ex.setParts(parts);
+      ::createExcerpt(&ex);
       QVERIFY(nscore);
 
       nscore->setName(parts.front()->partName());
@@ -332,7 +340,7 @@ Score* TestParts::doAddBreath()
       score->doLayout();
 
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->tick2segment(480);
@@ -405,7 +413,7 @@ Score* TestParts::doRemoveBreath()
       Score* score = readScore(DIR + "part-breath-add.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->first()->next(Segment::Type::Breath);
@@ -470,7 +478,7 @@ Score* TestParts::doAddFingering()
       Score* score = readScore(DIR + "part-empty-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->tick2segment(480);
@@ -536,7 +544,7 @@ Score* TestParts::doRemoveFingering()
       Score* score = readScore(DIR + "part-fingering-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->first()->next(Segment::Type::ChordRest);
@@ -606,7 +614,7 @@ Score* TestParts::doAddSymbol()
       Score* score = readScore(DIR + "part-empty-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->tick2segment(480);
@@ -672,7 +680,7 @@ Score* TestParts::doRemoveSymbol()
       Score* score = readScore(DIR + "part-symbol-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->first()->next(Segment::Type::ChordRest);
@@ -742,7 +750,7 @@ Score* TestParts::doAddChordline()
       Score* score = readScore(DIR + "part-empty-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->tick2segment(480);
@@ -809,7 +817,7 @@ Score* TestParts::doRemoveChordline()
       Score* score = readScore(DIR + "part-chordline-parts.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->first()->next(Segment::Type::ChordRest);
@@ -880,7 +888,7 @@ Score* TestParts::doAddImage()
       Score* score = readScore(DIR + "part1-2o.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->tick2segment(480);
@@ -946,7 +954,7 @@ Score* TestParts::doRemoveImage()
       Score* score = readScore(DIR + "part12o.mscx");
       score->doLayout();
       foreach(Excerpt* e, score->excerpts())
-            e->score()->doLayout();
+            e->partScore()->doLayout();
 
       Measure* m   = score->firstMeasure();
       Segment* s   = m->first()->next(SegChordRest);

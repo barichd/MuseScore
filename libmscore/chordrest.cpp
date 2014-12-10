@@ -99,8 +99,10 @@ ChordRest::ChordRest(const ChordRest& cr, bool link)
       _space        = cr._space;
 
       for (Lyrics* l : cr._lyricsList) {        // make deep copy
-            if (l == 0)
+            if (l == 0) {
+                  _lyricsList.append(0);
                   continue;
+                  }
             Lyrics* nl = new Lyrics(*l);
             if (link)
                   nl->linkTo(l);
@@ -200,6 +202,7 @@ void ChordRest::writeProperties(Xml& xml) const
       if (!duration().isZero() && (!actualDurationType().fraction().isValid()
          || (actualDurationType().fraction() != duration())))
             xml.fTag("duration", duration());
+
       foreach(const Articulation* a, _articulations)
             a->write(xml);
 #ifndef NDEBUG
@@ -218,6 +221,20 @@ void ChordRest::writeProperties(Xml& xml) const
             if (staff())
                   t *= staff()->timeStretch(xml.curTick);
             xml.curTick += t.ticks();
+            }
+      for (auto i : score()->spanner()) {     // TODO: dont search whole list
+            Spanner* s = i.second;
+            if (s->generated() || s->type() != Element::Type::SLUR || !xml.canWrite(s))
+                  continue;
+
+            if (s->startElement() == this) {
+                  int id = xml.spannerId(s);
+                  xml.tagE(QString("Slur type=\"start\" id=\"%1\"").arg(id));
+                  }
+            else if (s->endElement() == this) {
+                  int id = xml.spannerId(s);
+                  xml.tagE(QString("Slur type=\"stop\" id=\"%1\"").arg(id));
+                  }
             }
       }
 
@@ -279,6 +296,7 @@ bool ChordRest::readProperties(XmlReader& e)
             }
       else if (tag == "Attribute" || tag == "Articulation") {     // obsolete: "Attribute"
             Articulation* atr = new Articulation(score());
+            atr->setTrack(track());
             atr->read(e);
             add(atr);
             }
@@ -833,6 +851,8 @@ Element* ChordRest::drop(const DropData& data)
                   TextStyleType st = f->textStyleType();
                   if (st >= TextStyleType::DEFAULT)
                         f->setTextStyleType(st);
+                  if (e->type() == Element::Type::REHEARSAL_MARK)
+                        f->setText(score()->createRehearsalmarkText(segment()->tick()));
                   }
                   score()->undoAddElement(e);
                   return e;
@@ -932,36 +952,35 @@ void ChordRest::setDurationType(const TDuration& v)
 
 QString ChordRest::durationUserName()
       {
-      QString duration = tr("");
       QString tupletType = "";
       if(tuplet()) {
               switch (tuplet()->ratio().numerator()) {
                   case 2:
-                        tupletType += " " + tr("Duplet");
+                        tupletType = tr("Duplet");
                         break;
                   case 3:
-                        tupletType += " " + tr("Triplet");
+                        tupletType = tr("Triplet");
                         break;
                   case 4:
-                        tupletType += " " + tr("Quadruplet");
+                        tupletType = tr("Quadruplet");
                         break;
                   case 5:
-                        tupletType += " " + tr("Quintuplet");
+                        tupletType = tr("Quintuplet");
                         break;
                   case 6:
-                        tupletType += " " + tr("Sextuplet");
+                        tupletType = tr("Sextuplet");
                         break;
                   case 7:
-                        tupletType += " " + tr("Septuplet");
+                        tupletType = tr("Septuplet");
                         break;
                   case 8:
-                        tupletType += " " + tr("Octuplet");
+                        tupletType = tr("Octuplet");
                         break;
                   case 9:
-                        tupletType += " " + tr("Nonuplet");
+                        tupletType = tr("Nonuplet");
                         break;
                   default:
-                        tupletType += " " + tr("Custom Tuplet");
+                        tupletType = tr("Custom Tuplet");
                   }
             }
       QString dotString = "";
@@ -977,7 +996,7 @@ QString ChordRest::durationUserName()
                   dotString += " " + tr("Triple dotted");
                   break;
             }
-      return QString("%1:%2%3 %4").arg(duration).arg(tupletType).arg(dotString).arg(durationType().durationTypeUserName());
+      return QString("%2%3 %4").arg(tupletType).arg(dotString).arg(durationType().durationTypeUserName()).trimmed();
       }
 
 //---------------------------------------------------------

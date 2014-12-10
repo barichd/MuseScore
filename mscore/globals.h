@@ -29,15 +29,16 @@ extern bool noSeq;            ///< Dont use sequencer; cmd line option.
 extern bool noMidi;           ///< Dont use midi; cmd line option.
 extern bool midiInputTrace;   ///< debug option: dump midi input
 extern bool midiOutputTrace;  ///< debug option: dump midi output
-extern bool noGui;
 extern bool converterMode;
 extern double converterDpi;
+extern double guiScaling;
 
 //---------------------------------------------------------
 // MsWidget
 // used to assign actions (shortcuts) to the apropriate
 // widget (actions.cpp, shortcuts.cpp)
 //---------------------------------------------------------
+
 enum MsWidget {
       MAIN_WINDOW = 0,
       SCORE_TAB   = 1 << 0

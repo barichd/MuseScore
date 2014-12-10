@@ -250,6 +250,9 @@ void Score::transpose(TransposeMode mode, TransposeDirection direction, Key trKe
             if (mode == TransposeMode::BY_KEY) {
                   // calculate interval from "transpose by key"
                   Key oKey = st->key(startTick);
+                  int diff = st->part()->instr(startTick)->transpose().chromatic;
+                  if (diff)
+                        oKey = transposeKey(oKey, diff);
                   interval = keydiff2Interval(oKey, trKey, direction);
                   }
             else {
@@ -307,11 +310,13 @@ void Score::transpose(TransposeMode mode, TransposeDirection direction, Key trKe
                         undoTransposeHarmony(h, rootTpc, baseTpc);
                         }
                   else if ((e->type() == Element::Type::KEYSIG) && mode != TransposeMode::DIATONICALLY && trKeys) {
-                        KeySig* ks = static_cast<KeySig*>(e);
-                        Key key    = st->key(ks->tick());
-                        KeySigEvent ke = ks->keySigEvent();
-                        ke.setKey(key);
-                        undo(new ChangeKeySig(ks, ke, ks->showCourtesy()));
+                        KeySig* ks     = static_cast<KeySig*>(e);
+                        if (!ks->isCustom()) {
+                              Key key        = st->key(ks->tick());
+                              KeySigEvent ke = ks->keySigEvent();
+                              ke.setKey(key);
+                              undo(new ChangeKeySig(ks, ke, ks->showCourtesy()));
+                              }
                         }
                   }
             return;
@@ -346,6 +351,9 @@ void Score::transpose(TransposeMode mode, TransposeDirection direction, Key trKe
             }
 
       Segment* s1 = _selection.startSegment();
+      // if range start on mmRest, get the actual segment instead
+      if (s1->measure()->isMMRest())
+      	s1 = tick2segment(s1->tick(), true, s1->segmentType(), false);
       // if range starts with first CR of measure
       // then start looping from very beginning of measure
       // so we include key signature and can transpose that if requested
@@ -382,10 +390,12 @@ void Score::transpose(TransposeMode mode, TransposeDirection direction, Key trKe
                         QList<Element*> ll = e->linkList();
                         for (Element* e : ll) {
                               KeySig* ks = static_cast<KeySig*>(e);
-                              Key nKey = transposeKey(ks->key(), interval);
-                              KeySigEvent ke = ks->keySigEvent();
-                              ke.setKey(nKey);
-                              undo(new ChangeKeySig(ks, ke, ks->showCourtesy()));
+                              if (!ks->isCustom()) {
+                                    Key nKey = transposeKey(ks->key(), interval);
+                                    KeySigEvent ke = ks->keySigEvent();
+                                    ke.setKey(nKey);
+                                    undo(new ChangeKeySig(ks, ke, ks->showCourtesy()));
+                                    }
                               }
                         }
                   }
@@ -407,7 +417,11 @@ void Score::transpose(TransposeMode mode, TransposeDirection direction, Key trKe
                               rootTpc = transposeTpc(h->rootTpc(), interval, false);
                               baseTpc = transposeTpc(h->baseTpc(), interval, false);
                               }
-                        undoTransposeHarmony(h, rootTpc, baseTpc);
+                        // undoTransposeHarmony does not do links
+                        // because it is also used to handle transposing instruments
+                        // and score / parts could be in different concert pitch states
+                        for (Element* e : h->linkList())
+                              undoTransposeHarmony(static_cast<Harmony*>(e), rootTpc, baseTpc);
                         }
                   }
             }
@@ -453,17 +467,19 @@ void Score::transposeKeys(int staffStart, int staffEnd, int tickStart, int tickE
                   if (s->tick() == 0)
                         createKey = false;
                   KeySig* ks = static_cast<KeySig*>(s->element(staffIdx * VOICES));
-                  if (ks) {
+                  if (ks && !ks->isCustom()) {
                         Key key  = st->key(s->tick());
                         Key nKey = transposeKey(key, interval);
-                        KeySigEvent ke(nKey);
+                        KeySigEvent ke;
+                        ke.setKey(nKey);
                         undo(new ChangeKeySig(ks, ke, ks->showCourtesy()));
                         }
                   }
-            if (createKey) {
+            if (createKey && firstMeasure()) {
                   Key key  = Key::C;
                   Key nKey = transposeKey(key, interval);
-                  KeySigEvent ke(nKey);
+                  KeySigEvent ke;
+                  ke.setKey(nKey);
                   KeySig* ks = new KeySig(this);
                   ks->setTrack(staffIdx * VOICES);
                   ks->setKey(nKey);

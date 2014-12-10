@@ -211,6 +211,7 @@ QFont TextFragment::font(const Text* t) const
             }
       if (format.valign() != VerticalAlignment::AlignNormal)
             m *= subScriptSize;
+
       font.setPixelSize(lrint(m));
       return font;
       }
@@ -287,15 +288,19 @@ void TextBlock::layout(Text* t)
                         }
                   else
                         f.pos.setY(0.0);
-                  qreal w;
+                  qreal w = fm.width(f.text);
                   QRectF r;
-                  if (f.format.type() == CharFormatType::SYMBOL) {
-                        r = fm.tightBoundingRect(f.text).translated(f.pos);
-                        }
+                  if (f.format.type() == CharFormatType::SYMBOL)
+                        r = fm.tightBoundingRect(f.text);
                   else
-                        r = fm.boundingRect(f.text).translated(f.pos);
-                  w = fm.width(f.text);
-                  _bbox |= r;
+                        r = fm.boundingRect(f.text);
+
+                  // for whatever reason the boundingRect() is different
+                  // on second doLayout() (paint() ?)
+                  r.setX(0);        //HACK
+                  r.setWidth(w);
+
+                  _bbox |= r.translated(f.pos);
                   x += w;
                   _lineSpacing = _lineSpacing == 0 || fm.lineSpacing() == 0 ? qMax(_lineSpacing, fm.lineSpacing()) : qMin(_lineSpacing, fm.lineSpacing());
                   }
@@ -772,6 +777,7 @@ TextBlock TextBlock::split(int column)
 
 //---------------------------------------------------------
 //   text
+//    extract text, symbols are marked with <sym>xxx</sym>
 //---------------------------------------------------------
 
 QString TextBlock::text(int col1, int len) const
@@ -779,12 +785,23 @@ QString TextBlock::text(int col1, int len) const
       QString s;
       int col = 0;
       for (auto f : _text) {
-            for (const QChar& c : f.text) {
-                  if (c.isHighSurrogate())
-                        continue;
-                  ++col;
-                  if (col >= col1 && (len < 0 || ((col1-col) < len)))
-                        s += c;
+            if (f.text.isEmpty())
+                  continue;
+            if (f.format.type() == CharFormatType::TEXT) {
+                  for (const QChar& c : f.text) {
+                        if (c.isHighSurrogate())
+                              continue;
+                        if (col >= col1 && (len < 0 || ((col-col1) < len)))
+                              s += Xml::xmlString(c.unicode());
+                        ++col;
+                        }
+                  }
+            else {
+                  for (SymId id : f.ids) {
+                        if (col >= col1 && (len < 0 || ((col-col1) < len)))
+                              s += QString("<sym>%1</sym>").arg(Sym::id2name(id));
+                        ++col;
+                        }
                   }
             }
       return s;
@@ -856,10 +873,12 @@ void Text::draw(QPainter* p) const
       if (textStyle().hasFrame()) {
             if (textStyle().frameWidth().val() != 0.0) {
                   QColor color(textStyle().frameColor());
-                  if (!visible())
-                        color = Qt::gray;
-                  else if (selected())
-                        color = MScore::selectColor[0];
+                  if (score() && !score()->printing()) {
+                        if (!visible())
+                              color = Qt::gray;
+                        else if (selected())
+                              color = MScore::selectColor[0];
+                        }
                   QPen pen(color, textStyle().frameWidth().val() * spatium());
                   p->setPen(pen);
                   }
@@ -877,13 +896,8 @@ void Text::draw(QPainter* p) const
                   }
             }
       p->setBrush(Qt::NoBrush);
-      QColor color;
-      if (selected())
-            color = MScore::selectColor[0];
-      else if (!visible())
-            color = Qt::gray;
-      else
-            color = textStyle().foregroundColor();
+
+      QColor color = textColor();
       p->setPen(color);
       if (_editMode && _cursor.hasSelection()) {
             int r1 = _cursor.selectLine();
@@ -972,7 +986,7 @@ QRectF Text::cursorRect() const
 
 QColor Text::textColor() const
       {
-      if (!score()->printing()) {
+      if (score() && !score()->printing()) {
             QColor color;
             if (selected())
                   return MScore::selectColor[0];
@@ -996,7 +1010,7 @@ void Text::insert(TextCursor* cursor, QChar c)
             _layout[cursor->line()].setEol(true);
             cursor->setLine(cursor->line() + 1);
             cursor->setColumn(0);
-            if (_layout.size() < cursor->line())
+            if (_layout.size() <= cursor->line())
                   _layout.append(TextBlock());
             }
       else {
@@ -1179,6 +1193,7 @@ void Text::layout1()
             TextBlock* t = &_layout[i];
             t->layout(this);
             const QRectF* r = &t->boundingRect();
+
             if (r->height() == 0)
                   r = &_layout[i-i].boundingRect();
             y += t->lineSpacing();
@@ -1357,53 +1372,52 @@ void Text::genText()
                   if (f.text.isEmpty())                     // skip empty fragments, not to
                         continue;                           // insert extra HTML formatting
                   const CharFormat& format = f.format;
-                  if (format.type() == CharFormatType::TEXT) {
-                        if (cursor.format()->bold() != format.bold()) {
-                              if (format.bold())
-                                    xmlNesting.pushB();
-                              else
-                                    xmlNesting.popB();
-                              }
-                        if (cursor.format()->italic() != format.italic()) {
-                              if (format.italic())
-                                    xmlNesting.pushI();
-                              else
-                                    xmlNesting.popI();
-                              }
-                        if (cursor.format()->underline() != format.underline()) {
-                              if (format.underline())
-                                    xmlNesting.pushU();
-                              else
-                                    xmlNesting.popU();
-                              }
-
-                        if (format.fontSize() != cursor.format()->fontSize())
-                              _text += QString("<font size=\"%1\"/>").arg(format.fontSize());
-                        if (format.fontFamily() != cursor.format()->fontFamily())
-                              _text += QString("<font face=\"%1\"/>").arg(format.fontFamily());
-
-                        VerticalAlignment va = format.valign();
-                        VerticalAlignment cva = cursor.format()->valign();
-                        if (cva != va) {
-                              switch (va) {
-                                    case VerticalAlignment::AlignNormal:
-                                          xmlNesting.popToken(cva == VerticalAlignment::AlignSuperScript ? "sup" : "sub");
-                                          break;
-                                    case VerticalAlignment::AlignSuperScript:
-                                          xmlNesting.pushToken("sup");
-                                          break;
-                                    case VerticalAlignment::AlignSubScript:
-                                          xmlNesting.pushToken("sub");
-                                          break;
-                                    }
-                              }
-                        _text += Xml::xmlString(f.text);
-                        cursor.setFormat(format);
+                  if (cursor.format()->bold() != format.bold()) {
+                        if (format.bold())
+                              xmlNesting.pushB();
+                        else
+                              xmlNesting.popB();
                         }
+                  if (cursor.format()->italic() != format.italic()) {
+                        if (format.italic())
+                              xmlNesting.pushI();
+                        else
+                              xmlNesting.popI();
+                        }
+                  if (cursor.format()->underline() != format.underline()) {
+                        if (format.underline())
+                              xmlNesting.pushU();
+                        else
+                              xmlNesting.popU();
+                        }
+
+                  if (format.fontSize() != cursor.format()->fontSize())
+                        _text += QString("<font size=\"%1\"/>").arg(format.fontSize());
+                  if (format.fontFamily() != cursor.format()->fontFamily())
+                        _text += QString("<font face=\"%1\"/>").arg(format.fontFamily());
+
+                  VerticalAlignment va = format.valign();
+                  VerticalAlignment cva = cursor.format()->valign();
+                  if (cva != va) {
+                        switch (va) {
+                              case VerticalAlignment::AlignNormal:
+                                    xmlNesting.popToken(cva == VerticalAlignment::AlignSuperScript ? "sup" : "sub");
+                                    break;
+                              case VerticalAlignment::AlignSuperScript:
+                                    xmlNesting.pushToken("sup");
+                                    break;
+                              case VerticalAlignment::AlignSubScript:
+                                    xmlNesting.pushToken("sub");
+                                    break;
+                              }
+                        }
+                  if (format.type() == CharFormatType::TEXT)
+                        _text += Xml::xmlString(f.text);
                   else {
                         for (SymId id : f.ids)
                               _text += QString("<sym>%1</sym>").arg(Sym::id2name(id));
                         }
+                  cursor.setFormat(format);
                   }
             if (block.eol())
                   _text += QChar::LineFeed;
@@ -1486,7 +1500,12 @@ void Text::endEdit()
 
       genText();
 
-      if (_text != oldText) {
+      if (_text != oldText || type() == Element::Type::HARMONY) {
+            // avoid creating unnecessary state on undo stack if edit did not change anything
+            // but go ahead and do this anyhow for chord symbols no matter what
+            // the code to special case transposition relies on the fact
+            // that we are setting all linked elements to same text here
+
             for (Element* e : linkList()) {
                   // this line was added in https://github.com/musescore/MuseScore/commit/dcf963b3d6140fa550c08af18d9fb6f6e59733a3
                   // it replaced the commented-out call to undoPushProperty in startEdit() above
@@ -1496,12 +1515,22 @@ void Text::endEdit()
                   // when we called it for the linked elements
                   // by also checking for empty old text, we avoid creating an unnecessary element on undo stack
                   // that returns us to the initial empty text created upon startEdit()
-                  if (!oldText.isEmpty())
-                        score()->undo()->push1(new ChangeProperty(e, P_ID::TEXT, oldText));
+
+                  if (!oldText.isEmpty()) {
+                        // oldText is good for original element
+                        // but use original text for each linked element
+                        // these can differ (eg, for chord symbols in transposing parts)
+
+                        QString undoText = (e == this) ? oldText : static_cast<Text*>(e)->_text;
+                        score()->undo()->push1(new ChangeProperty(e, P_ID::TEXT, undoText));
+                        }
+
                   // because we are pushing each individual linked element's old text to the undo stack,
                   // we don't actually need to call the undo version of change property here
+
                   e->setProperty(P_ID::TEXT, _text);
-                  // the change mentioned above eliminated the following line, which is where the linked elements actually got their text set
+
+                  // the change mentioned previously eliminated the following line, which is where the linked elements actually got their text set
                   // one would think this line alone would be enough to make undo work
                   // but it is not, because by the time we get here, we've already overwritten _text for the current item
                   // that is why formerly we skipped this call for "this"
@@ -1509,7 +1538,13 @@ void Text::endEdit()
                   //if (e != this) e->undoChangeProperty(P_ID::TEXT, _text);
                   }
             }
-      textChanged();
+      else {
+            // only necessary in the case of _text == oldtext
+            // because otherwise, setProperty() call above calls setText(), which calls textChanged()
+            // yet we still need to consider this a change, since newly added palette texts end up here
+            textChanged();
+            }
+
       // formerly we needed to setLayoutAll here to force the text to be laid out after editing
       // but now that we are calling setProperty for all elements - including "this"
       // it is no longer necessary
@@ -1548,11 +1583,13 @@ bool Text::edit(MuseScoreView*, int, int key, Qt::KeyboardModifiers modifiers, c
                   {
                   if (_cursor.hasSelection())
                         deleteSelectedText();
+                  int line = _cursor.line();
 
                   CharFormat* charFmt = _cursor.format();         // take current format
-                  _layout.insert(_cursor.line() + 1, curLine().split(_cursor.column()));
-                  _layout[_cursor.line()].setEol(true);
-                  _cursor.setLine(_cursor.line() + 1);
+                  _layout.insert(line + 1, curLine().split(_cursor.column()));
+                  _layout[line].setEol(true);
+
+                  _cursor.setLine(line+1);
                   _cursor.setColumn(0);
                   _cursor.setFormat(*charFmt);                    // restore orig. format at new line
                   s.clear();
@@ -1895,7 +1932,7 @@ QString Text::selectedText() const
                   else
                         s += t.text(0, -1);
                   }
-            if (row != rows -1)
+            if (row != rows - 1)
                   s += "\n";
             }
       return s;
@@ -1997,6 +2034,8 @@ void Text::writeProperties(Xml& xml, bool writeText, bool writeStyle) const
 //   readProperties
 //---------------------------------------------------------
 
+extern QString convertOldTextStyleNames(const QString&);
+
 bool Text::readProperties(XmlReader& e)
       {
       const QStringRef& tag(e.name());
@@ -2054,8 +2093,11 @@ bool Text::readProperties(XmlReader& e)
                         }
                   //st = TextStyleType(i);
                   }
-            else
+            else {
+                  if (score()->mscVersion() <= 124)
+                        val = convertOldTextStyleNames(val);
                   st = score()->style()->textStyleType(val);
+                  }
             setTextStyleType(st);
             }
       else if (tag == "styleName")          // obsolete, unstyled text
@@ -2286,7 +2328,62 @@ void Text::paste()
       QString txt = QApplication::clipboard()->text(QClipboard::Clipboard);
       if (MScore::debugMode)
             qDebug("Text::paste() <%s>", qPrintable(txt));
-      insertText(txt);
+
+      int state = 0;
+      QString token;
+      QString sym;
+      bool symState = false;
+
+      for (const QChar& c : txt) {
+            if (state == 0) {
+                  if (c == '<') {
+                        state = 1;
+                        token.clear();
+                        }
+                  else if (c == '&') {
+                        state = 2;
+                        token.clear();
+                        }
+                  else {
+                        if (symState)
+                              sym += c;
+                        else
+                              insertText(c);
+                        }
+                  }
+            else if (state == 1) {
+                  if (c == '>') {
+                        state = 0;
+                        if (token == "sym") {
+                              symState = true;
+                              sym.clear();
+                              }
+                        else if (token == "/sym") {
+                              symState = false;
+                              insertSym(Sym::name2id(sym));
+                              }
+                        }
+                  else
+                        token += c;
+                  }
+            else if (state == 2) {
+                  if (c == ';') {
+                        state = 0;
+                        if (token == "lt")
+                              insertText("<");
+                        else if (token == "gt")
+                              insertText(">");
+                        else if (token == "amp")
+                              insertText("&");
+                        else if (token == "quot")
+                              insertText("\"");
+                        else
+                              insertSym(Sym::name2id(token));
+                        }
+                  else
+                        token += c;
+                  }
+            }
       layoutEdit();
       bool lo = type() == Element::Type::INSTRUMENT_NAME;
       score()->setLayoutAll(lo);
@@ -2496,8 +2593,12 @@ QString Text::convertFromHtml(const QString& ss) const
                   if (f.isValid()) {
                         QTextCharFormat tf = f.charFormat();
                         QFont font = tf.font();
-                        if (fabs(size - font.pointSizeF()) > 0.1) {
-                              size = font.pointSizeF();
+                        qreal htmlSize = font.pointSizeF();
+                        // html font sizes may have spatium adjustments; need to undo this
+                        if (textStyle().sizeIsSpatiumDependent())
+                              htmlSize *= SPATIUM20 * MScore::DPI / spatium();
+                        if (fabs(size - htmlSize) > 0.1) {
+                              size = htmlSize;
                               s += QString("<font size=\"%1\"/>").arg(size);
                               }
                         if (family != font.family()) {
@@ -2559,24 +2660,15 @@ QString Text::convertToHtml(const QString& s, const TextStyle& st)
 QString Text::accessibleInfo()
       {
       QString rez;
+      const QList<TextStyle>& ts = score()->style()->textStyles();
       switch (textStyleType()) {
             case TextStyleType::TITLE:
-                  rez = tr ("Title");
-                  break;
             case TextStyleType::SUBTITLE:
-                  rez = tr ("Subtitle");
-                  break;
             case TextStyleType::COMPOSER:
-                  rez = tr("Composer");
-                  break;
             case TextStyleType::POET:
-                  rez = tr ("Lyricist");
-                  break;
             case TextStyleType::TRANSLATOR:
-                  rez = tr ("Translator");
-                  break;
             case TextStyleType::MEASURE_NUMBER:
-                  rez = tr ("Measure number");
+                  rez = qApp->translate("TextStyle",ts.at(int(textStyleType())).name().toUtf8());
                   break;
             default:
                   rez = Element::accessibleInfo();
@@ -2590,5 +2682,36 @@ QString Text::accessibleInfo()
       return  QString("%1: %2").arg(rez).arg(s);
       }
 
+int Text::subtype() const
+      {
+      switch (textStyleType()) {
+            case TextStyleType::TITLE:
+            case TextStyleType::SUBTITLE:
+            case TextStyleType::COMPOSER:
+            case TextStyleType::POET:
+            case TextStyleType::FRAME:
+            case TextStyleType::INSTRUMENT_EXCERPT:
+                  return int(textStyleType());
+            default: return -1;
+            }
+      }
+
+QString Text::subtypeName() const
+      {
+      QString rez;
+      const QList<TextStyle>& ts = score()->style()->textStyles();
+      switch (textStyleType()) {
+            case TextStyleType::TITLE:
+            case TextStyleType::SUBTITLE:
+            case TextStyleType::COMPOSER:
+            case TextStyleType::POET:
+            case TextStyleType::FRAME:
+            case TextStyleType::INSTRUMENT_EXCERPT:
+                  rez = qApp->translate("TextStyle",ts.at(int(textStyleType())).name().toUtf8());
+                  break;
+            default: rez = "";
+            }
+      return rez;
+      }
 }
 

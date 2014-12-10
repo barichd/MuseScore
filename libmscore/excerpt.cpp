@@ -49,7 +49,7 @@ namespace Ms {
 
 void Excerpt::read(XmlReader& e)
       {
-      const QList<Part*>& pl = _score->parts();
+      const QList<Part*>& pl = _oscore->parts();
       QString name;
       while (e.readNextStartElement()) {
             const QStringRef& tag = e.name();
@@ -75,7 +75,7 @@ void Excerpt::read(XmlReader& e)
 
 bool Excerpt::operator!=(const Excerpt& e) const
       {
-      if (e._score != _score)
+      if (e._oscore != _oscore)
             return true;
       if (e._title != _title)
             return true;
@@ -97,11 +97,13 @@ static void localSetScore(void* score, Element* element)
 //   createExcerpt
 //---------------------------------------------------------
 
-void createExcerpt(Score* score, const QList<Part*>& parts)
+void createExcerpt(Excerpt* excerpt)
       {
-      QList<int> srcStaves;
+      Score* oscore = excerpt->oscore();
+      Score* score  = excerpt->partScore();
 
-      Score* oscore = parts.front()->score();
+      QList<Part*>& parts = excerpt->parts();
+      QList<int> srcStaves;
 
       // clone layer:
       for (int i = 0; i < 32; ++i) {
@@ -149,7 +151,7 @@ void createExcerpt(Score* score, const QList<Part*>& parts)
 
       VBox* titleFramePart = static_cast<VBox*>(measure);
       titleFramePart->copyValues(titleFrameScore);
-      QString partLabel = parts.front()->longName();
+      QString partLabel = excerpt->title();     // parts.front()->longName();
       if (!partLabel.isEmpty()) {
             Text* txt = new Text(score);
             txt->setTextStyleType(TextStyleType::INSTRUMENT_EXCERPT);
@@ -180,7 +182,10 @@ void createExcerpt(Score* score, const QList<Part*>& parts)
                   int startTrack = staffIdx * VOICES;
                   int endTrack   = startTrack + VOICES;
 
-                  score->transposeKeys(staffIdx, staffIdx+1, 0, score->lastSegment()->tick(), interval);
+                  int endTick = 0;
+                  if (score->lastSegment())
+                        endTick = score->lastSegment()->tick();
+                  score->transposeKeys(staffIdx, staffIdx+1, 0, endTick, interval);
 
                   for (auto segment = score->firstSegment(Segment::Type::ChordRest); segment; segment = segment->next1(Segment::Type::ChordRest)) {
                         for (auto e : segment->annotations()) {
@@ -250,7 +255,60 @@ static void cloneSpanner(Spanner* s, Score* score, int dstTrack, int dstTrack2)
             if (!ns->endElement())
                   qDebug("clone Slur: no end element");
             }
-      score->addSpanner(ns);
+      score->undo(new AddElement(ns));
+      }
+
+//---------------------------------------------------------
+//   cloneTuplets
+//---------------------------------------------------------
+
+static void cloneTuplets(ChordRest* ocr, ChordRest* ncr, Tuplet* ot, TupletMap& tupletMap, Measure* m, int track)
+      {
+      ot->setTrack(ocr->track());
+      Tuplet* nt = tupletMap.findNew(ot);
+      if (nt == 0) {
+            nt = static_cast<Tuplet*>(ot->linkedClone());
+            nt->setTrack(track);
+            nt->setParent(m);
+            tupletMap.add(ot, nt);
+
+            Tuplet* nt1 = nt;
+            while (ot->tuplet()) {
+                  Tuplet* nt = tupletMap.findNew(ot->tuplet());
+                  if (nt == 0) {
+                        nt = static_cast<Tuplet*>(ot->tuplet()->linkedClone());
+                        nt->setTrack(track);
+                        nt->setParent(m);
+                        tupletMap.add(ot->tuplet(), nt);
+                        }
+                  nt->add(nt1);
+                  nt1->setTuplet(nt);
+                  ot = ot->tuplet();
+                  nt1 = nt;
+                  }
+            }
+      nt->add(ncr);
+      ncr->setTuplet(nt);
+      }
+
+//---------------------------------------------------------
+//   mapTrack
+//---------------------------------------------------------
+
+static int mapTrack(int srcTrack, const QList<int>& map)
+      {
+      if (srcTrack == -1)
+            return -1;
+      int track = -1;
+      int st = 0;
+      foreach(int staff, map) {
+            if (staff == srcTrack / VOICES) {
+                  track = (st * VOICES) + srcTrack % VOICES;
+                  break;
+                  }
+            ++st;
+            }
+      return track;
       }
 
 //---------------------------------------------------------
@@ -293,15 +351,9 @@ void cloneStaves(Score* oscore, Score* score, const QList<int>& map)
                   int tracks = oscore->nstaves() * VOICES;
                   for (int srcTrack = 0; srcTrack < tracks; ++srcTrack) {
                         TupletMap tupletMap;    // tuplets cannot cross measure boundaries
-                        int track = -1;
-                        int st = 0;
-                        foreach(int staff, map) {
-                              if (staff == srcTrack/VOICES) {
-                                    track = (st * VOICES) + srcTrack % VOICES;
-                                    break;
-                                    }
-                              ++st;
-                              }
+
+                        int track = mapTrack(srcTrack, map);
+
                         Tremolo* tremolo = 0;
                         for (Segment* oseg = m->first(); oseg; oseg = oseg->next()) {
                               Segment* ns = nullptr; //create segment later, on demand
@@ -357,19 +409,9 @@ void cloneStaves(Score* oscore, Score* score, const QList<int>& map)
                                           }
 
                                     Tuplet* ot = ocr->tuplet();
-                                    if (ot) {
-                                          Tuplet* nt = tupletMap.findNew(ot);
-                                          if (nt == 0) {
-                                                // nt = new Tuplet(*ot);
-                                                nt = static_cast<Tuplet*>(ot->linkedClone());
-                                                nt->clear();
-                                                nt->setTrack(track);
-                                                nt->setScore(score);
-                                                tupletMap.add(ot, nt);
-                                                }
-                                          nt->add(ncr);
-                                          ncr->setTuplet(nt);
-                                          }
+
+                                    if (ot)
+                                          cloneTuplets(ocr, ncr, ot, tupletMap, m, track);
 
                                     if (oe->type() == Element::Type::CHORD) {
                                           Chord* och = static_cast<Chord*>(ocr);
@@ -437,12 +479,20 @@ void cloneStaves(Score* oscore, Score* score, const QList<int>& map)
                         if (st == LayoutBreak::Type::PAGE || st == LayoutBreak::Type::LINE)
                               continue;
                         }
+                  int track = -1;
+                  if (e->track() != -1) {
+                        track = mapTrack(e->track(), map);
+                        if (track == -1)
+                              continue;
+                        }
+
                   Element* ne;
                   if (e->type() == Element::Type::TEXT || e->type() == Element::Type::LAYOUT_BREAK) // link the title, subtitle etc...
                         ne = e->linkedClone();
                   else
                         ne = e->clone();
                   ne->setScore(score);
+                  ne->setTrack(track);
                   nmb->add(ne);
                   }
             nmbl->add(nmb);
@@ -476,9 +526,10 @@ void cloneStaves(Score* oscore, Score* score, const QList<int>& map)
             int dstTrack  = -1;
             int dstTrack2 = -1;
             int           st = 0;
-            //always export voltas to first staff in part
-            if (s->type() == Element::Type::VOLTA)
+            if (s->type() == Element::Type::VOLTA) {
+                  //always export voltas to first staff in part
                   dstTrack = s->voice();
+                  }
             else {            //export other spanner if staffidx matches
                   for (int index : map) {
                         if (index == staffIdx) {
@@ -551,20 +602,15 @@ void cloneStaff(Staff* srcStaff, Staff* dstStaff)
                               ChordRest* ocr = static_cast<ChordRest*>(oe);
                               ChordRest* ncr = static_cast<ChordRest*>(ne);
                               Tuplet* ot     = ocr->tuplet();
-                              if (ot) {
-                                    ot->setTrack(ocr->track());
-                                    Tuplet* nt = tupletMap.findNew(ot);
-                                    if (nt == 0) {
-                                          // nt = new Tuplet(*ot);
-                                          nt = static_cast<Tuplet*>(ot->linkedClone());
-                                          nt->clear();
-                                          nt->setTrack(dstTrack);
-                                          nt->setParent(m);
-                                          tupletMap.add(ot, nt);
-                                          }
-                                    nt->add(ncr);
-                                    ncr->setTuplet(nt);
-                                    }
+                              if (ot)
+                                    cloneTuplets(ocr, ncr, ot, tupletMap, m, dstTrack);
+
+                              // remove lyrics from chord
+                              foreach (Lyrics* l, ncr->lyricsList())
+                                    l->unlink();
+                              qDeleteAll(ncr->lyricsList());
+                              ncr->lyricsList().clear();
+
                               foreach (Element* e, seg->annotations()) {
                                     if (e->generated() || e->systemFlag())
                                           continue;
@@ -577,8 +623,8 @@ void cloneStaff(Staff* srcStaff, Staff* dstStaff)
                                           case Element::Type::FRET_DIAGRAM:
                                           case Element::Type::HARMONY:
                                           case Element::Type::FIGURED_BASS:
-                                          case Element::Type::LYRICS:
                                           case Element::Type::DYNAMIC:
+                                          case Element::Type::LYRICS:   // not normally segment-attached
                                                 continue;
                                           default:
                                                 Element* ne = e->clone();
@@ -691,6 +737,12 @@ void cloneStaff2(Staff* srcStaff, Staff* dstStaff, int stick, int etick)
                                     ncr->setTuplet(nt);
                                     nt->add(ncr);
                                     }
+                              // remove lyrics from chord
+                              foreach (Lyrics* l, ncr->lyricsList())
+                                    l->unlink();
+                              qDeleteAll(ncr->lyricsList());
+                              ncr->lyricsList().clear();
+
                               foreach (Element* e, oseg->annotations()) {
                                     if (e->generated() || e->systemFlag())
                                           continue;
@@ -700,10 +752,11 @@ void cloneStaff2(Staff* srcStaff, Staff* dstStaff, int stick, int etick)
                                           // exclude certain element types
                                           // this should be same list excluded in Score::undoAddElement()
                                           case Element::Type::STAFF_TEXT:
+                                          case Element::Type::FRET_DIAGRAM:
                                           case Element::Type::HARMONY:
                                           case Element::Type::FIGURED_BASS:
-                                          case Element::Type::LYRICS:
                                           case Element::Type::DYNAMIC:
+                                          case Element::Type::LYRICS:   // not normally segment-attached
                                                 continue;
                                           default:
                                                 Element* ne = e->clone();

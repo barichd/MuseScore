@@ -58,7 +58,7 @@ DrumrollEditor::DrumrollEditor(QWidget* parent)
       mainWidget->setLayout(layout);
       layout->setSpacing(0);
 
-      QToolBar* tb = addToolBar(tr("toolbar 1"));
+      QToolBar* tb = addToolBar(tr("Toolbar 1"));
       tb->addAction(getAction("undo"));
       tb->addAction(getAction("redo"));
       tb->addSeparator();
@@ -77,7 +77,7 @@ DrumrollEditor::DrumrollEditor(QWidget* parent)
       tb->addSeparator();
 
       //-------------
-      tb = addToolBar(tr("toolbar 3"));
+      tb = addToolBar(tr("Toolbar 3"));
       layout->addWidget(tb, 1, 0, 1, 2);
 
       for (int i = 0; i < VOICES; ++i) {
@@ -192,7 +192,7 @@ void DrumrollEditor::setStaff(Staff* st)
       {
       staff = st;
       _score = staff->score();
-      setWindowTitle(QString(tr("MuseScore: <%1> Staff: %2")).arg(_score->name()).arg(st->idx()));
+      setWindowTitle(tr("MuseScore: <%1> Staff: %2").arg(_score->name()).arg(st->idx()));
       TempoMap* tl = _score->tempomap();
       TimeSigMap*  sl = _score->sigmap();
       for (int i = 0; i < 3; ++i)

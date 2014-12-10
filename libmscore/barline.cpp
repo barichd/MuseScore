@@ -55,11 +55,11 @@ const barLineTableItem barLineTable[] = {
         { BarLineType::NORMAL,           QT_TRANSLATE_NOOP("Palette", "Normal") },
         { BarLineType::BROKEN,           QT_TRANSLATE_NOOP("Palette", "Dashed style") },
         { BarLineType::DOTTED,           QT_TRANSLATE_NOOP("Palette", "Dotted style") },
-        { BarLineType::END,              QT_TRANSLATE_NOOP("Palette", "End Bar style") },
-        { BarLineType::DOUBLE,           QT_TRANSLATE_NOOP("Palette", "Double Bar style") },
-        { BarLineType::START_REPEAT,     QT_TRANSLATE_NOOP("Palette", "Start Repeat") },
-        { BarLineType::END_REPEAT,       QT_TRANSLATE_NOOP("Palette", "End Repeat") },
-        { BarLineType::END_START_REPEAT, QT_TRANSLATE_NOOP("Palette", "End-Start Repeat") },
+        { BarLineType::END,              QT_TRANSLATE_NOOP("Palette", "End bar style") },
+        { BarLineType::DOUBLE,           QT_TRANSLATE_NOOP("Palette", "Double bar style") },
+        { BarLineType::START_REPEAT,     QT_TRANSLATE_NOOP("Palette", "Start repeat") },
+        { BarLineType::END_REPEAT,       QT_TRANSLATE_NOOP("Palette", "End repeat") },
+        { BarLineType::END_START_REPEAT, QT_TRANSLATE_NOOP("Palette", "End-start repeat") },
       };
 
 unsigned int barLineTableSize()
@@ -532,11 +532,13 @@ bool BarLine::acceptDrop(const DropData& data) const
       if (type == Element::Type::BAR_LINE) {
             if (parent() && parent()->type() == Element::Type::SEGMENT)
                   return true;
+            // accept drop to system bar line only if no span change
+            // and type is not structural (repeat or end)
             if (parent() && parent()->type() == Element::Type::SYSTEM) {
                   BarLine* b = static_cast<BarLine*>(data.element);
-                  return (b->barLineType() == BarLineType::BROKEN || b->barLineType() == BarLineType::DOTTED
-                     || b->barLineType() == BarLineType::NORMAL || b->barLineType() == BarLineType::DOUBLE
-                     || b->spanFrom() != 0 || b->spanTo() != DEFAULT_BARLINE_TO);
+                  return (b->spanFrom() == 0 && b->spanTo() == DEFAULT_BARLINE_TO
+                        && (b->barLineType() == BarLineType::BROKEN || b->barLineType() == BarLineType::DOTTED
+                     || b->barLineType() == BarLineType::NORMAL || b->barLineType() == BarLineType::DOUBLE));
                   }
             }
       else {
@@ -564,25 +566,26 @@ Element* BarLine::drop(const DropData& data)
                   delete e;
                   return 0;
                   }
-            // system left-side bar line
+            // system left-side bar line: route type change to first measure of system
             if (parent()->type() == Element::Type::SYSTEM) {
-                  BarLine* b = static_cast<System*>(parent())->barLine();
-                  score()->undoChangeProperty(b, P_ID::SUBTYPE, int(bl->barLineType()));
+                  Measure* m = static_cast<System*>(parent())->firstMeasure();
+                  if (m && m->systemInitialBarLineType() != bl->barLineType())
+                        m->undoChangeProperty(P_ID::SYSTEM_INITIAL_BARLINE_TYPE, int(bl->barLineType()));
                   delete e;
                   return 0;
                   }
 
-            //parent is a segment
+            // parent is a segment
             Measure* m = static_cast<Segment*>(parent())->measure();
-
             // check if the new property can apply to this single bar line
             bool oldRepeat = (barLineType() == BarLineType::START_REPEAT || barLineType() == BarLineType::END_REPEAT
                         || barLineType() == BarLineType::END_START_REPEAT);
             bool newRepeat = (bl->barLineType() == BarLineType::START_REPEAT || bl->barLineType() == BarLineType::END_REPEAT
                         || bl->barLineType() == BarLineType::END_START_REPEAT);
-            // if repeats are not involved or drop refers to span rather than subtype =>
+            // if ctrl was used and repeats are not involved,
+            // or if drop refers to span rather than subtype =>
             // single bar line drop
-            if( (!oldRepeat && !newRepeat) || (bl->spanFrom() != 0 || bl->spanTo() != DEFAULT_BARLINE_TO) ) {
+            if (((data.modifiers & Qt::ControlModifier) && !oldRepeat && !newRepeat) || (bl->spanFrom() != 0 || bl->spanTo() != DEFAULT_BARLINE_TO) ) {
                   // if drop refers to span, update this bar line span
                   if(bl->spanFrom() != 0 || bl->spanTo() != DEFAULT_BARLINE_TO) {
                         // if dropped spanFrom or spanTo are below the middle of standard staff (5 lines)
@@ -592,7 +595,7 @@ Element* BarLine::drop(const DropData& data)
                         int spanTo     = bl->spanTo() > 4 ? bottomSpan - (8 - bl->spanTo()) : bl->spanTo();
                         score()->undoChangeSingleBarLineSpan(this, 1, spanFrom, spanTo);
                         }
-                  // if drop refer to subtype, update this bar line subtype
+                  // if drop refers to subtype, update this bar line subtype
                   else {
 //                        score()->undoChangeBarLine(m, bl->barLineType());
                         score()->undoChangeProperty(this, P_ID::SUBTYPE, int(bl->barLineType()));
@@ -609,7 +612,9 @@ Element* BarLine::drop(const DropData& data)
                         return 0;
                         }
                   }
-            m->drop(data);
+            score()->undoChangeBarLine(m, bl->barLineType());
+            delete e;
+            return 0;
             }
       else if (type == Element::Type::ARTICULATION) {
             Articulation* atr = static_cast<Articulation*>(e);
@@ -992,11 +997,19 @@ int BarLine::tick() const
 
 //---------------------------------------------------------
 //   barLineTypeName
+//
+//    Instance form returning the name string of the bar line type and
+//    static form returning the name string for an arbitrary bar line type.
 //---------------------------------------------------------
 
 QString BarLine::barLineTypeName() const
       {
       return QString(barLineNames[int(barLineType())]);
+      }
+
+QString BarLine::barLineTypeName(BarLineType t)
+      {
+      return QString(barLineNames[int(t)]);
       }
 
 //---------------------------------------------------------
@@ -1079,14 +1092,16 @@ void BarLine::remove(Element* e)
 
 void BarLine::updateCustomSpan()
       {
-      // if barline belongs to a staff and any of the staff span params is different from barline's...
-      if (staff())
-            if (staff()->barLineSpan() != _span || staff()->barLineFrom() != _spanFrom || staff()->barLineTo() != _spanTo) {
-                  _customSpan = true;           // ...span is custom
-                  return;
-                  }
+      // system bar line span is internally managed: _customSpan can never be true
+      if (parent() && parent()->type() == Element::Type::SYSTEM) {
+            _customSpan = false;
+            return;
+            }
+      // span is custom if barline belongs to a staff and any of the staff span params is different from barline's
       // if no staff or same span params as staff, span is not custom
-      _customSpan = false;
+      Staff* stf = staff();
+      _customSpan = stf && (stf->barLineSpan() != _span || stf->barLineFrom() != _spanFrom || stf->barLineTo() != _spanTo);
+      updateGenerated(!_customSpan);
       }
 
 //---------------------------------------------------------
@@ -1121,7 +1136,12 @@ void BarLine::updateCustomType()
                               break;
                         }
                   }
-            // if parent is not a segment, it can only be a system and NORMAL can be used as ref. type
+            // if parent is not a segment, it can only be a system and for systems
+            // bar line type is internally managed and _customSubtype can never be true
+            else {
+                  _customSubtype = false;
+                  return;
+                  }
             }
       _customSubtype = (_barLineType != refType);
       updateGenerated(!_customSubtype);         // if _customSubType, _genereated is surely false

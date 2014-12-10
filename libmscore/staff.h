@@ -160,17 +160,18 @@ class Staff : public QObject {
 
       void addTimeSig(TimeSig*);
       void removeTimeSig(TimeSig*);
-      void clearTimeSig()            { timesigs.clear(); }
+      void clearTimeSig();
       Fraction timeStretch(int tick) const;
       TimeSig* timeSig(int tick) const;
       const Groups& group(int tick) const;
 
-      KeyList* keyList()               { return &_keys;      }
-      Key key(int tick) const;
+      KeyList* keyList()               { return &_keys;                  }
+      Key key(int tick) const          { return keySigEvent(tick).key(); }
+      KeySigEvent keySigEvent(int tick) const;
       int nextKeyTick(int tick) const;
       int currentKeyTick(int tick) const;
-      Key prevKey(int tick) const;
-      void setKey(int tick, Key);
+      KeySigEvent prevKey(int tick) const;
+      void setKey(int tick, KeySigEvent);
       void removeKey(int tick);
 
       bool show() const;

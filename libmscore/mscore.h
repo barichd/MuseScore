@@ -15,8 +15,8 @@
 
 namespace Ms {
 
-#define MSC_VERSION     "2.00"
-static const int MSCVERSION = 200;
+#define MSC_VERSION     "2.01"
+static const int MSCVERSION = 201;
 
 // History:
 //    1.3   added staff->_barLineSpan
@@ -46,6 +46,8 @@ static const int MSCVERSION = 200;
 //      -   symbol numbers in TextLine() replaced by symbol names
 //          TextStyle: frameWidth, paddingWidth are now in Spatium units (instead of mm)
 //    2.00  (Version 2.0)
+//    2.01  save SlurSegment position relative to staff
+
 
 
 class MStyle;
@@ -169,7 +171,7 @@ enum class AlignmentFlags : char {
 
 enum class OffsetType : char {
       ABS,       ///< offset in point units
-      SPATIUM    ///< offset in space units
+      SPATIUM    ///< offset in staff space units
       };
 
 //---------------------------------------------------------
@@ -267,9 +269,12 @@ enum class TextStyleType : char {
       LYRIC1,
       LYRIC2,
       FINGERING,
+      LH_GUITAR_FINGERING,
+      RH_GUITAR_FINGERING,
+
+      STRING_NUMBER,
       INSTRUMENT_LONG,
       INSTRUMENT_SHORT,
-
       INSTRUMENT_EXCERPT,
       DYNAMICS,
       TECHNIQUE,
@@ -277,9 +282,9 @@ enum class TextStyleType : char {
       METRONOME,
       MEASURE_NUMBER,
       TRANSLATOR,
+
       TUPLET,
       SYSTEM,
-
       STAFF,
       HARMONY,
       REHEARSAL_MARK,
@@ -288,17 +293,16 @@ enum class TextStyleType : char {
       REPEAT,            // obsolete
       VOLTA,
       FRAME,
+
       TEXTLINE,
       GLISSANDO,
-
-      STRING_NUMBER,
       OTTAVA,
       BENCH,
       HEADER,
       FOOTER,
       INSTRUMENT_CHANGE,
-      LYRICS_VERSE_NUMBER,
       FIGURED_BASS,
+
       TEXT_STYLES
       };
 

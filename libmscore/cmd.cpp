@@ -263,9 +263,9 @@ void Score::cmdAddSpanner(Spanner* spanner, const QPointF& pos)
             if (e && e->type() == Element::Type::CHORD) {
                   Chord* chord = static_cast<Chord*>(e);
                   Fraction l = chord->duration();
-                  if (chord->notes().size() > 1) {
+                  // if (chord->notes().size() > 1) {
                         // trill do not work for chords
-                        }
+                  //      }
                   Note* note = chord->upNote();
                   while (note->tieFor()) {
                         note = note->tieFor()->endNote();
@@ -279,8 +279,10 @@ void Score::cmdAddSpanner(Spanner* spanner, const QPointF& pos)
                               break;
                         s = s->next1(Segment::Type::ChordRest);
                         }
-                  if (s)
-                        spanner->setTick2(s->tick());
+                  if (s) {
+                        for (Element* e : spanner->linkList())
+                              static_cast<Spanner*>(e)->setTick2(s->tick());
+                        }
                   Fraction d(1,32);
                   Fraction e = l / d;
                   int n = e.numerator() / e.denominator();
@@ -364,7 +366,7 @@ void Score::cmdAddInterval(int val, const QList<Note*>& nl)
       {
       startCmd();
       for (Note* on : nl) {
-            Note* note = new Note(*on);
+            Note* note = new Note(this);
             Chord* chord = on->chord();
             note->setParent(chord);
             int valTmp = val < 0 ? val+1 : val-1;
@@ -760,7 +762,7 @@ bool Score::makeGapVoice(Segment* seg, int track, Fraction len, int tick)
       cr = static_cast<ChordRest*>(seg->element(track));
       if (!cr) {
             // check if we are in the middle of a chord/rest
-            Segment* seg1 = seg->prev(Segment::Type::ChordRest);;
+            Segment* seg1 = seg->prev(Segment::Type::ChordRest);
             for (;;) {
                   if (seg1 == 0) {
                         qDebug("1:makeGapVoice: no segment before tick %d", tick);
@@ -775,7 +777,37 @@ bool Score::makeGapVoice(Segment* seg, int track, Fraction len, int tick)
             ChordRest* cr1 = static_cast<ChordRest*>(seg1->element(track));
             Fraction srcF = cr1->duration();
             Fraction dstF = Fraction::fromTicks(tick - cr1->tick());
-            undoChangeChordRestLen(cr1, TDuration(dstF));
+            QList<TDuration> dList = toDurationList(dstF, true);
+            int n = dList.size();
+            undoChangeChordRestLen(cr1, TDuration(dList[0]));
+            if (n > 1) {
+                  int crtick = cr1->tick() + cr1->actualTicks();
+                  Measure* measure = tick2measure(crtick);
+                  if (cr1->type() == Element::Type::CHORD) {
+                        // split Chord
+                        Chord* c = static_cast<Chord*>(cr1);
+                        for (int i = 1; i < n; ++i) {
+                              TDuration d = dList[i];
+                              Chord* c2 = addChord(crtick, d, c, true, c->tuplet());
+                              c = c2;
+                              seg1 = c->segment();
+                              crtick += c->actualTicks();
+                              }
+                        }
+                  else {
+                        // split Rest
+                        Rest* r       = static_cast<Rest*>(cr1);
+                        for (int i = 1; i < n; ++i) {
+                              TDuration d = dList[i];
+                              Rest* r2      = static_cast<Rest*>(r->clone());
+                              r2->setDuration(d.fraction());
+                              r2->setDurationType(d);
+                              undoAddCR(r2, measure, crtick);
+                              seg1 = r2->segment();
+                              crtick += r2->actualTicks();
+                              }
+                        }
+                  }
             setRest(tick, track, srcF - dstF, true, 0);
             for (;;) {
                   seg1 = seg1->next1(Segment::Type::ChordRest);
@@ -949,9 +981,11 @@ qDebug("  +ChangeCRLen::setRest %d/%d", f2.numerator(), f2.denominator());
                   if (first) {
                         QList<TDuration> dList = toDurationList(f2, true);
                         undoChangeChordRestLen(cr, dList[0]);
-                        if(dList.size() > 1) {
-                              TDuration remain = TDuration(f2) - dList[0];
-                              setRest(tick +dList[0].ticks(), track, remain.fraction() * timeStretch, (remain.dots() > 0), tuplet);
+                        int tick2 = cr->tick();
+                        for (int i = 1; i < dList.size(); ++i) {
+                              tick2 += dList[i-1].ticks();
+                              TDuration d = dList[i];
+                              setRest(tick2, track, d.fraction() * timeStretch, (d.dots() > 0), tuplet);
                               }
                         }
                   else {
@@ -1012,7 +1046,7 @@ qDebug("  ChangeCRLen:: %d += %d(actual=%d)", tick, f2.ticks(), f2.ticks() * tim
                                     oc = cc;
                                     }
                               if (first) {
-                                    select(oc, SelectType::SINGLE, 0);
+                                    // select(oc, SelectType::SINGLE, 0);
                                     first = false;
                                     }
                               tick += oc->actualTicks();
@@ -1509,12 +1543,12 @@ void Score::resetUserStretch()
 //   moveUp
 //---------------------------------------------------------
 
-void Score::moveUp(Chord* chord)
+void Score::moveUp(ChordRest* cr)
       {
-      Staff* staff  = chord->staff();
+      Staff* staff  = cr->staff();
       Part* part    = staff->part();
       int rstaff    = staff->rstaff();
-      int staffMove = chord->staffMove();
+      int staffMove = cr->staffMove();
 
       if ((staffMove == -1) || (rstaff + staffMove <= 0))
             return;
@@ -1527,19 +1561,19 @@ void Score::moveUp(Chord* chord)
             }
       else  {
             // move the chord up a staff
-            undo(new ChangeChordStaffMove(chord, staffMove - 1));
+            undo(new ChangeChordStaffMove(cr, staffMove - 1));
             }
       }
 //---------------------------------------------------------
 //   moveDown
 //---------------------------------------------------------
 
-void Score::moveDown(Chord* chord)
+void Score::moveDown(ChordRest* cr)
       {
-      Staff* staff  = chord->staff();
+      Staff* staff  = cr->staff();
       Part* part    = staff->part();
       int rstaff    = staff->rstaff();
-      int staffMove = chord->staffMove();
+      int staffMove = cr->staffMove();
       // calculate the number of staves available so that we know whether there is another staff to move down to
       int rstaves   = part->nstaves();
 
@@ -1556,7 +1590,7 @@ void Score::moveDown(Chord* chord)
             }
       else  {
             // move the chord down a staff
-            undo(new ChangeChordStaffMove(chord, staffMove + 1));
+            undo(new ChangeChordStaffMove(cr, staffMove + 1));
             }
       }
 
@@ -1660,11 +1694,18 @@ bool Score::processMidiInput()
                         }
                   NoteVal nval(ev.pitch);
                   Staff* st = staff(inputState().track() / VOICES);
-                  Key key = st->key(inputState().tick());
-                  nval.tpc = pitch2tpc(nval.pitch, key, Prefer::NEAREST);
-                  if (!styleB(StyleIdx::concertPitch)) {
-                      nval.pitch += st->part()->instr(inputState().tick())->transpose().chromatic;
-                      }
+                  Key key   = st->key(inputState().tick());
+
+                  if (styleB(StyleIdx::concertPitch)) {
+                        nval.tpc1 = pitch2tpc(nval.pitch, key, Prefer::NEAREST);
+                        nval.tpc2 = nval.tpc1;  // DEBUG
+                        }
+                  else {
+                        nval.pitch += st->part()->instr(inputState().tick())->transpose().chromatic;
+                        nval.tpc2  = pitch2tpc(nval.pitch, key, Prefer::NEAREST);
+                        nval.tpc1 = nval.tpc2;  // DEBUG
+                        }
+
                   addPitch(nval, ev.chord);
                   }
             }
@@ -1851,9 +1892,9 @@ Element* Score::selectMove(const QString& cmd)
       else if (cmd == "select-prev-chord")
             el = prevChordRest(cr);
       else if (cmd == "select-next-measure")
-            el = nextMeasure(cr, true);
+            el = nextMeasure(cr, true, true);
       else if (cmd == "select-prev-measure")
-            el = prevMeasure(cr);
+            el = prevMeasure(cr, true);
       else if (cmd == "select-begin-line") {
             Measure* measure = cr->segment()->measure()->system()->firstMeasure();
             if (!measure)
@@ -1933,7 +1974,7 @@ void Score::cmdHalfDuration()
             //
             // handle appoggiatura and acciaccatura
             //
-            cr->setDurationType(d);
+            undoChangeChordRestLen(cr, d);
             }
       else
             changeCRlen(cr, d);
@@ -1963,7 +2004,7 @@ void Score::cmdDoubleDuration()
             //
             // handle appoggiatura and acciaccatura
             //
-            cr->setDurationType(d);
+            undoChangeChordRestLen(cr, d);
             }
       else
             changeCRlen(cr, d);
@@ -2306,9 +2347,16 @@ void Score::cmd(const QAction* a)
             deselectAll();
             undo(new ChangeStyleVal(this, StyleIdx::createMultiMeasureRests, val));
             }
-      else if (cmd == "add-brackets") {
+      else if (cmd == "add-brackets")
             cmdAddBracket();
-      }
+      else if (cmd == "explode")
+            cmdExplode();
+      else if (cmd == "implode")
+            cmdImplode();
+      else if (cmd == "slash-fill")
+            cmdSlashFill();
+      else if (cmd == "slash-rhythm")
+            cmdSlashRhythm();
       else
             qDebug("unknown cmd <%s>", qPrintable(cmd));
       }
@@ -2364,5 +2412,303 @@ void Score::cmdInsertClef(Clef* clef, ChordRest* cr)
       delete clef;
       }
 
-}
+//---------------------------------------------------------
+//   cmdExplode
+///   explodes contents of top selected staff into subsequent staves
+//---------------------------------------------------------
 
+void Score::cmdExplode()
+      {
+      if (!selection().isRange())
+            return;
+
+      int srcStaff  = selection().staffStart();
+      int lastStaff = selection().staffEnd();
+      int srcTrack  = srcStaff * VOICES;
+
+      // reset selection to top staff only
+      // force complete measures
+      Segment* startSegment = selection().startSegment();
+      Segment* endSegment = selection().endSegment();
+      Measure* startMeasure = startSegment->measure();
+      Measure* endMeasure = endSegment ? endSegment->measure() : lastMeasure();
+      deselectAll();
+      select(startMeasure, SelectType::RANGE, srcStaff);
+      select(endMeasure, SelectType::RANGE, srcStaff);
+      startSegment = selection().startSegment();
+      endSegment = selection().endSegment();
+
+      if (srcStaff == lastStaff - 1) {
+            // only one staff was selected up front - determine number of staves
+            // loop through all chords looking for maximum number of notes
+            int n = 0;
+            for (Segment* s = startSegment; s && s != endSegment; s = s->next1()) {
+                  Element* e = s->element(srcTrack);
+                  if (e && e->type() == Element::Type::CHORD) {
+                        Chord* c = static_cast<Chord*>(e);
+                        n = qMax(n, c->notes().size());
+                        }
+                  }
+            lastStaff = qMin(nstaves(), srcStaff + n);
+            }
+
+      // make our own copy of selection, since pasting modifies actual selection
+      Selection srcSelection(selection());
+
+      // copy to all destination staves
+      for (int i = 1; srcStaff + i < lastStaff; ++i) {
+            int track = (srcStaff + i) * VOICES;
+            ChordRest* cr = startMeasure->findChordRest(0, track);
+            if (cr) {
+                  XmlReader e(srcSelection.mimeData());
+                  e.setPasteMode(true);
+                  if (!pasteStaff(e, cr->segment(), cr->staffIdx()))
+                        qDebug("explode: paste failed");
+                  }
+            }
+
+      // loop through each staff removing all but one note from each chord
+      for (int i = 0; srcStaff + i < lastStaff; ++i) {
+            int track = (srcStaff + i) * VOICES;
+            for (Segment* s = startSegment; s && s != endSegment; s = s->next1()) {
+                  Element* e = s->element(track);
+                  if (e && e->type() == Element::Type::CHORD) {
+                        Chord* c = static_cast<Chord*>(e);
+                        QList<Note*> notes = c->notes();
+                        int nnotes = notes.size();
+                        // keep note "i" from top, which is backwards from nnotes - 1
+                        // reuse notes if there are more instruments than notes
+                        int stavesPerNote = qMax((lastStaff - srcStaff) / nnotes, 1);
+                        int keepIndex = qMax(nnotes - 1 - (i / stavesPerNote), 0);
+                        Note* keepNote = c->notes()[keepIndex];
+                        foreach (Note* n, notes) {
+                              if (n != keepNote)
+                                    undoRemoveElement(n);
+                              }
+                        }
+                  }
+            }
+
+      // select exploded region
+      deselectAll();
+      select(startMeasure, SelectType::RANGE, srcStaff);
+      select(endMeasure, SelectType::RANGE, lastStaff - 1);
+
+      setLayoutAll(true);
+      }
+
+//---------------------------------------------------------
+//   cmdImplode
+///   implodes contents of selected staves into top staff
+///   for single staff, merge voices
+//---------------------------------------------------------
+
+void Score::cmdImplode()
+      {
+      if (!selection().isRange())
+            return;
+
+      int dstStaff = selection().staffStart();
+      int endStaff = selection().staffEnd();
+      int startTrack = dstStaff * VOICES;
+      int endTrack;
+      int trackInc;
+      // if single staff selected, combine voices
+      // otherwise combine staves
+      if (dstStaff == endStaff - 1) {
+            endTrack = startTrack + VOICES;
+            trackInc = 1;
+            }
+      else {
+            endTrack = endStaff * VOICES;
+            trackInc = VOICES;
+            }
+
+      Segment* startSegment = selection().startSegment();
+      Segment* endSegment = selection().endSegment();
+      Measure* startMeasure = startSegment->measure();
+      Measure* endMeasure = endSegment ? endSegment->measure() : lastMeasure();
+
+      // loop through segments adding notes to chord on top staff
+      int dstTrack = dstStaff * VOICES;
+      for (Segment* s = startSegment; s && s != endSegment; s = s->next1()) {
+            if (s->segmentType() != Segment::Type::ChordRest)
+                  continue;
+            Element* dst = s->element(dstTrack);
+            if (dst && dst->type() == Element::Type::CHORD) {
+                  Chord* dstChord = static_cast<Chord*>(dst);
+                  // see if we are tying in to this chord
+                  Chord* tied = 0;
+                  foreach (Note* n, dstChord->notes()) {
+                        if (n->tieBack()) {
+                              tied = n->tieBack()->startNote()->chord();
+                              break;
+                              }
+                        }
+                  // loop through each subsequent staff (or track within staff)
+                  // looking for notes to add
+                  for (int srcTrack = startTrack + trackInc; srcTrack < endTrack; srcTrack += trackInc) {
+                        Element* src = s->element(srcTrack);
+                        if (src && src->type() == Element::Type::CHORD) {
+                              Chord* srcChord = static_cast<Chord*>(src);
+                              // when combining voices, skip if not same duration
+                              if ((trackInc == 1) && (srcChord->duration() != dstChord->duration()))
+                                    continue;
+                              // add notes
+                              foreach (Note* n, srcChord->notes()) {
+                                    NoteVal nv(n->pitch());
+                                    nv.tpc1 = n->tpc1();
+                                    // skip duplicates
+                                    if (dstChord->findNote(nv.pitch))
+                                          continue;
+                                    Note* nn = addNote(dstChord, nv);
+                                    // add tie to this note if original chord was tied
+                                    if (tied) {
+                                          // find note to tie to
+                                          foreach (Note *tn, tied->notes()) {
+                                                if (nn->pitch() == tn->pitch() && nn->tpc() == tn->tpc() && !tn->tieFor()) {
+                                                      // found note to tie
+                                                      Tie* tie = new Tie(this);
+                                                      tie->setStartNote(tn);
+                                                      tie->setEndNote(nn);
+                                                      tie->setTrack(tn->track());
+                                                      undoAddElement(tie);
+                                                      }
+                                                }
+                                          }
+                                    }
+                              }
+                        // delete chordrest from source track if possible
+                        if (src && src->voice())
+                              undoRemoveElement(src);
+                        }
+                  }
+            else if (dst && trackInc == 1) {
+                  // destination track has something, but it isn't a chord
+                  // remove everything from other voices if in "voice mode"
+                  for (int i = 1; i < VOICES; ++i) {
+                        Element* e = s->element(dstTrack + i);
+                        if (e)
+                              undoRemoveElement(e);
+                        }
+                  }
+            }
+
+      // select destination staff only
+      deselectAll();
+      select(startMeasure, SelectType::RANGE, dstStaff);
+      select(endMeasure, SelectType::RANGE, dstStaff);
+
+      setLayoutAll(true);
+      }
+
+//---------------------------------------------------------
+//   cmdSlashFill
+///   fills selected region with slashes
+//---------------------------------------------------------
+
+void Score::cmdSlashFill()
+      {
+      int startStaff = selection().staffStart();
+      int endStaff = selection().staffEnd();
+      Segment* startSegment = selection().startSegment();
+      Segment* endSegment = selection().endSegment();
+      int endTick = endSegment ? endSegment->tick() : lastSegment()->tick() + 1;
+      Chord* firstSlash = 0;
+      Chord* lastSlash = 0;
+
+      // loop through staves in selection
+      for (int staffIdx = startStaff; staffIdx < endStaff; ++staffIdx) {
+            // loop through segments adding slashes on each beat
+            for (Segment* s = startSegment; s && s->tick() < endTick; s = s->next1()) {
+                  if (s->segmentType() != Segment::Type::ChordRest)
+                        continue;
+                  // determine beat type based on time signature
+                  int d = s->measure()->timesig().denominator();
+                  int n = (d > 4 && s->measure()->timesig().numerator() % 3 == 0) ? 3 : 1;
+                  Fraction f(n, d);
+                  // skip over any leading segments before next (first) beat
+                  if (s->tick() % f.ticks())
+                        continue;
+                  //expandVoice(s, staffIdx * VOICES);
+                  // construct note
+                  int line = 0;
+                  bool error = false;
+                  NoteVal nv;
+                  if (staff(staffIdx)->staffType()->group() == StaffGroup::TAB)
+                        line = staff(staffIdx)->lines() / 2;
+                  else
+                        line = staff(staffIdx)->lines() - 1;
+                  if (staff(staffIdx)->staffType()->group() == StaffGroup::PERCUSSION) {
+                        nv.pitch = 0;
+                        nv.headGroup = NoteHead::Group::HEAD_SLASH;
+                        }
+                  else {
+                        Position p;
+                        p.segment = s;
+                        p.staffIdx = staffIdx;
+                        p.line = line;
+                        p.fret = FRET_NONE;
+                        _is.setRest(false);     // needed for tab
+                        nv = noteValForPosition(p, error);
+                        }
+                  if (error)
+                        continue;
+                  // insert & turn into slash
+                  s = setNoteRest(s, staffIdx * VOICES, nv, f);
+                  Chord* c = static_cast<Chord*>(s->element(staffIdx * VOICES));
+                  if (c->links()) {
+                        foreach (Element* e, *c->links()) {
+                              Chord* lc = static_cast<Chord*>(e);
+                              lc->setSlash(true, true);
+                              }
+                        }
+                  else
+                        c->setSlash(true, true);
+                  lastSlash = c;
+                  if (!firstSlash)
+                        firstSlash = c;
+                  }
+            }
+
+      // re-select the slashes
+      deselectAll();
+      if (firstSlash && lastSlash) {
+            select(firstSlash, SelectType::RANGE);
+            select(lastSlash, SelectType::RANGE);
+            }
+      setLayoutAll(true);
+      }
+
+//---------------------------------------------------------
+//   cmdSlashRhythm
+///   converts rhythms in selected region to slashes
+//---------------------------------------------------------
+
+void Score::cmdSlashRhythm()
+      {
+      QList<Chord*> chords;
+      // loop through all notes in selection
+      foreach (Element* e, selection().elements()) {
+            if (e->voice() >= 2 && e->type() == Element::Type::REST) {
+                  Rest* r = static_cast<Rest*>(e);
+                  r->setAccent(!r->accent());
+                  continue;
+                  }
+            else if (e->type() == Element::Type::NOTE) {
+                  Note* n = static_cast<Note*>(e);
+                  if (n->noteType() != NoteType::NORMAL)
+                        continue;
+                  Chord* c = n->chord();
+                  // check for duplicates (chords with multiple notes)
+                  if (chords.contains(c))
+                        continue;
+                  chords.append(c);
+                  // toggle slash setting
+                  c->setSlash(!c->slash(), false);
+                  }
+            }
+      setLayoutAll(true);
+      }
+
+}

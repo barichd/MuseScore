@@ -68,14 +68,12 @@ class KeySig;
 class TimeSig;
 class Clef;
 class Image;
-class Hairpin;
 class Bend;
 class TremoloBar;
 class NoteEvent;
 class SlurSegment;
 class InstrumentChange;
 class Box;
-class Accidental;
 class Spanner;
 class BarLine;
 enum class ClefType : signed char;
@@ -88,6 +86,8 @@ enum class PlayEventType : char;
 #else
 #define UNDO_NAME(a)
 #endif
+
+enum class LayoutMode : char;
 
 //---------------------------------------------------------
 //   UndoCommand
@@ -107,6 +107,7 @@ class UndoCommand {
       UndoCommand* removeChild()         { return childList.takeLast(); }
       int childCount() const             { return childList.size();     }
       void unwind();
+      virtual void cleanup(bool undo);
 #ifdef DEBUG_UNDO
       virtual const char* name() const  { return "UndoCommand"; }
 #endif
@@ -394,34 +395,6 @@ class ChangeElement : public UndoCommand {
       };
 
 //---------------------------------------------------------
-//   ChangeVoltaEnding
-//---------------------------------------------------------
-
-class ChangeVoltaEnding : public UndoCommand {
-      Volta* volta;
-      QList<int> list;
-      void flip();
-
-   public:
-      ChangeVoltaEnding(Volta*, const QList<int>&);
-      UNDO_NAME("ChangeVoltaEnding")
-      };
-
-//---------------------------------------------------------
-//   ChangeVoltaText
-//---------------------------------------------------------
-
-class ChangeVoltaText : public UndoCommand {
-      Volta* volta;
-      QString text;
-      void flip();
-
-   public:
-      ChangeVoltaText(Volta*, const QString&);
-      UNDO_NAME("ChangeVoltaText");
-      };
-
-//---------------------------------------------------------
 //   ChangeChordRestSize
 //---------------------------------------------------------
 
@@ -642,6 +615,7 @@ class AddElement : public UndoCommand {
       AddElement(Element*);
       virtual void undo();
       virtual void redo();
+      virtual void cleanup(bool);
 #ifdef DEBUG_UNDO
       virtual const char* name() const;
 #endif
@@ -658,6 +632,7 @@ class RemoveElement : public UndoCommand {
       RemoveElement(Element*);
       virtual void undo();
       virtual void redo();
+      virtual void cleanup(bool);
 #ifdef DEBUG_UNDO
       virtual const char* name() const;
 #endif
@@ -880,12 +855,12 @@ class ChangeStyleVal : public UndoCommand {
 //---------------------------------------------------------
 
 class ChangeChordStaffMove : public UndoCommand {
-      Chord* chord;
+      ChordRest* chordRest;
       int staffMove;
       void flip();
 
    public:
-      ChangeChordStaffMove(Chord*, int);
+      ChangeChordStaffMove(ChordRest* cr, int);
       UNDO_NAME("ChangeChordStaffMove")
       };
 
@@ -986,24 +961,6 @@ class ChangeImage : public UndoCommand {
       ChangeImage(Image* i, bool l, bool a, int _z)
          : image(i), lockAspectRatio(l), autoScale(a), z(_z) {}
       UNDO_NAME("ChangeImage")
-      };
-
-//---------------------------------------------------------
-//   ChangeHairpin
-//---------------------------------------------------------
-
-class ChangeHairpin : public UndoCommand {
-      Hairpin* hairpin;
-      int veloChange;
-      Dynamic::Range dynRange;
-      bool diagonal;
-
-      void flip();
-
-   public:
-      ChangeHairpin(Hairpin* h, int c, Dynamic::Range t, bool dg)
-         : hairpin(h), veloChange(c), dynRange(t), diagonal(dg) {}
-      UNDO_NAME("ChangeHairpin")
       };
 
 //---------------------------------------------------------
@@ -1468,6 +1425,36 @@ class ChangeStartEndSpanner : public UndoCommand {
    public:
       ChangeStartEndSpanner(Spanner* sp, Element*s, Element*e) : spanner(sp), start(s), end(e) {}
       UNDO_NAME("ChangeStartEndSpanner")
+      };
+
+//---------------------------------------------------------
+//   ChangeLayoutMode
+//---------------------------------------------------------
+
+class ChangeLayoutMode : public UndoCommand {
+      Score* score;
+      LayoutMode layoutMode;
+
+      void flip();
+
+   public:
+      ChangeLayoutMode(Score* s, LayoutMode m) : score(s), layoutMode(m) {}
+      UNDO_NAME("ChangeLayoutMode")
+      };
+
+//---------------------------------------------------------
+//   ChangeMetaTags
+//---------------------------------------------------------
+
+class ChangeMetaTags : public UndoCommand {
+      Score* score;
+      QMap<QString,QString> metaTags;
+
+      void flip();
+
+   public:
+      ChangeMetaTags(Score* s, const QMap<QString,QString>& m) : score(s), metaTags(m) {}
+      UNDO_NAME("ChangeMetaTags")
       };
 
 

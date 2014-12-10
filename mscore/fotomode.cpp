@@ -251,6 +251,9 @@ void ScoreView::setupFotoMode()
       s->addTransition(new CommandTransition("escape", states[NORMAL]));    // ->normal
       s->addTransition(new CommandTransition("fotomode", states[NORMAL]));  // ->normal
       s->addTransition(new ScoreViewDragTransition(this, states[DRAG]));    // ->stateDrag
+      CommandTransition* ct = new CommandTransition("copy", 0);             // copy
+      connect(ct, SIGNAL(triggered()), SLOT(fotoModeCopy()));
+      s->addTransition(ct);
 
       QState* f1 = new QState(s);
       f1->setObjectName("foto-normal");
@@ -346,10 +349,15 @@ void ScoreView::startFotomode()
       qreal h = 8.0 / _matrix.m22();
       QRectF r(-w*.5, -h*.5, w, h);
 
-      if (_foto->rect().isEmpty()) {
-            qreal w = width() / _matrix.m11();
-            qreal h = height() / _matrix.m22();
-            _foto->setRect(QRectF(w * .3, h * .3, w * .4, h * .4));
+      // try to find existing rect within current view
+      QRectF view = toLogical(QRect(0.0, 0.0, width(), height()));
+      if (_foto->rect().isEmpty() || !view.intersects(_foto->rect())) {
+            // rect not found - construct new rect with default size & relative position
+            qreal w = view.width();
+            qreal h = view.height();
+            QRectF rect(w * .3, h * .3, w * .4, h * .4);
+            // convert to absolute position
+            _foto->setRect(rect.translated(view.topLeft()));
             }
       for (int i = 0; i < MAX_GRIPS; ++i)
             grip[i] = r;
@@ -581,11 +589,10 @@ void ScoreView::fotoContextPopup(QContextMenuEvent* ev)
       a->setText(tr("Screenshot Mode"));
 
       a = getAction("copy");
-      a->setEnabled(true);
       popup->addAction(a);
 
       popup->addSeparator();
-      a = popup->addAction(QString(tr("Resolution (%1 DPI)...")).arg(preferences.pngResolution));
+      a = popup->addAction(tr("Resolution (%1 DPI)...").arg(preferences.pngResolution));
       a->setData("set-res");
       QAction* bgAction = popup->addAction(tr("transparent background"));
       bgAction->setCheckable(true);
@@ -622,31 +629,8 @@ void ScoreView::fotoContextPopup(QContextMenuEvent* ev)
             saveFotoAs(true, _foto->rect());
       else if (cmd == "screenshot")
             saveFotoAs(false, _foto->rect());
-      else if (cmd == "copy") {
-            QMimeData* mimeData = new QMimeData;
-
-            // oowriter wants transparent==false
-            bool transparent = false; // preferences.pngTransparent;
-            double convDpi   = preferences.pngResolution;
-            double mag       = convDpi / MScore::DPI;
-
-            QRectF r(_foto->rect());
-
-            int w = lrint(r.width()  * mag);
-            int h = lrint(r.height() * mag);
-
-            QImage::Format f;
-            f = QImage::Format_ARGB32_Premultiplied;
-            QImage printer(w, h, f);
-            printer.setDotsPerMeterX(lrint(MScore::DPMM * 1000.0));
-            printer.setDotsPerMeterY(lrint(MScore::DPMM * 1000.0));
-            printer.fill(transparent ? 0 : 0xffffffff);
-            QPainter p(&printer);
-            paintRect(true, p, r, mag);
-            p.end();
-            mimeData->setImageData(printer);
-            QApplication::clipboard()->setMimeData(mimeData);
-            }
+      else if (cmd == "copy")
+            ;
       else if (cmd == "set-res") {
             bool ok;
             double resolution = QInputDialog::getDouble(this,
@@ -678,6 +662,33 @@ void ScoreView::fotoContextPopup(QContextMenuEvent* ev)
             preferences.pngTransparent = bgAction->isChecked();
             preferences.dirty = true;
             }
+      }
+
+//---------------------------------------------------------
+//   fotoModeCopy
+//---------------------------------------------------------
+
+void ScoreView::fotoModeCopy()
+      {
+      // oowriter wants transparent==false
+      bool transparent = false; // preferences.pngTransparent;
+      double convDpi   = preferences.pngResolution;
+      double mag       = convDpi / MScore::DPI;
+
+      QRectF r(_foto->rect());
+
+      int w = lrint(r.width()  * mag);
+      int h = lrint(r.height() * mag);
+
+      QImage::Format f;
+      f = QImage::Format_ARGB32_Premultiplied;
+      QImage printer(w, h, f);
+      printer.setDotsPerMeterX(lrint(MScore::DPMM * 1000.0));
+      printer.setDotsPerMeterY(lrint(MScore::DPMM * 1000.0));
+      printer.fill(transparent ? 0 : 0xffffffff);
+      QPainter p(&printer);
+      paintRect(true, p, r, mag);
+      QApplication::clipboard()->setImage(printer);
       }
 
 //---------------------------------------------------------

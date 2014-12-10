@@ -136,7 +136,6 @@
           <Segment>
             <subtype>0</subtype>
             <off2 x="-3.87097" y="0"/>
-            <placement>below</placement>
             </Segment>
           <beginText>
             <text>8va</text>
@@ -152,10 +151,6 @@
             <tpc>14</tpc>
             </Note>
           </Chord>
-        <BarLine>
-          <subtype>normal</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       <Measure number="3">
         <Chord>
@@ -187,10 +182,6 @@
             <tpc>18</tpc>
             </Note>
           </Chord>
-        <BarLine>
-          <subtype>normal</subtype>
-          <span>1</span>
-          </BarLine>
         </Measure>
       <Measure number="4">
         <Chord>

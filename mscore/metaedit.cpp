@@ -34,6 +34,7 @@ MetaEditDialog::MetaEditDialog(Score* s, QWidget* parent)
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
       score = s;
+      dirty = false;
 
       level->setValue(score->mscVersion());
       version->setText(score->mscoreVersion());
@@ -43,10 +44,10 @@ MetaEditDialog::MetaEditDialog(Score* s, QWidget* parent)
       QMapIterator<QString, QString> i(s->metaTags());
       while (i.hasNext()) {
             i.next();
-            // xml.tag(QString("metaTag name=\"%1\"").arg(i.key()), i.value());
             QLabel* label = new QLabel;
             label->setText(i.key());
             QLineEdit* text = new QLineEdit(i.value(), 0);
+            connect(text, SIGNAL(textChanged(const QString&)), SLOT(setDirty()));
             grid->addWidget(label, idx, 0);
             grid->addWidget(text, idx, 1);
             ++idx;
@@ -62,7 +63,7 @@ void MetaEditDialog::newClicked()
       {
       QString s = QInputDialog::getText(this,
          tr("MuseScore: Input Tag Name"),
-         tr("New Tag Name:")
+         tr("New tag name:")
          );
       if (!s.isEmpty()) {
             int idx = grid->rowCount();
@@ -72,6 +73,7 @@ void MetaEditDialog::newClicked()
             grid->addWidget(label, idx, 0);
             grid->addWidget(text, idx, 1);
             }
+      dirty = true;
       }
 
 //---------------------------------------------------------
@@ -80,17 +82,19 @@ void MetaEditDialog::newClicked()
 
 void MetaEditDialog::accept()
       {
-      int idx = grid->rowCount();
-
-      QMap<QString, QString>& m(score->metaTags());
-      m.clear();
-
-      for (int i = 0; i < idx; ++i) {
-            QLayoutItem* labelItem = grid->itemAtPosition(i, 0);
-            QLayoutItem* dataItem  = grid->itemAtPosition(i, 1);
-            QLabel* label = static_cast<QLabel*>(labelItem->widget());
-            QLineEdit* le = static_cast<QLineEdit*>(dataItem->widget());
-            m.insert(label->text(), le->text());
+      if (dirty) {
+            int idx = grid->rowCount();
+            QMap<QString, QString> m;
+            for (int i = 0; i < idx; ++i) {
+                  QLayoutItem* labelItem = grid->itemAtPosition(i, 0);
+                  QLayoutItem* dataItem  = grid->itemAtPosition(i, 1);
+                  if (labelItem && dataItem) {
+                        QLabel* label = static_cast<QLabel*>(labelItem->widget());
+                        QLineEdit* le = static_cast<QLineEdit*>(dataItem->widget());
+                        m.insert(label->text(), le->text());
+                        }
+                  }
+            score->undo(new ChangeMetaTags(score, m));
             }
       QDialog::accept();
       }

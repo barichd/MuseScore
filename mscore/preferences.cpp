@@ -43,6 +43,7 @@
 #include "pathlistdialog.h"
 #include "mstyle/mconfig.h"
 #include "resourceManager.h"
+#include "synthesizer/msynthesizer.h"
 
 namespace Ms {
 
@@ -67,12 +68,12 @@ struct PeriodItem {
        };
 
 static PeriodItem updatePeriods[] = {
-      PeriodItem(24,      QT_TRANSLATE_NOOP("preferences","Every day")),
-      PeriodItem(72,      QT_TRANSLATE_NOOP("preferences","Every 3 days")),
-      PeriodItem(7*24,    QT_TRANSLATE_NOOP("preferences","Every week")),
-      PeriodItem(2*7*24,  QT_TRANSLATE_NOOP("preferences","Every 2 weeks")),
-      PeriodItem(30*24,   QT_TRANSLATE_NOOP("preferences","Every month")),
-      PeriodItem(2*30*24, QT_TRANSLATE_NOOP("preferences","Every 2 months")),
+      PeriodItem(24,      QT_TRANSLATE_NOOP("preferences","Every Day")),
+      PeriodItem(72,      QT_TRANSLATE_NOOP("preferences","Every 3 Days")),
+      PeriodItem(7*24,    QT_TRANSLATE_NOOP("preferences","Every Week")),
+      PeriodItem(2*7*24,  QT_TRANSLATE_NOOP("preferences","Every 2 Weeks")),
+      PeriodItem(30*24,   QT_TRANSLATE_NOOP("preferences","Every Month")),
+      PeriodItem(2*30*24, QT_TRANSLATE_NOOP("preferences","Every 2 Months")),
       PeriodItem(-1,      QT_TRANSLATE_NOOP("preferences","Never")),
       };
 
@@ -105,7 +106,7 @@ void Preferences::init()
       enableMidiInput    = true;
       playNotes          = true;
 
-      showNavigator      = true;
+      showNavigator      = false;
       showPlayPanel      = false;
       showWebPanel       = true;
       showStatusBar      = true;
@@ -129,7 +130,6 @@ void Preferences::init()
       usePortaudioAudio = true;
 #endif
 
-      midiPorts          = 2;
       rememberLastConnections = true;
 
       alsaDevice         = "default";
@@ -141,9 +141,10 @@ void Preferences::init()
 
       antialiasedDrawing       = true;
       sessionStart             = SessionStart::SCORE;
-      startScore               = ":/data/My_First_Score.mscx";
+      startScore               = ":/data/My_First_Score.mscz";
       defaultStyleFile         = "";
       showSplashScreen         = true;
+      showStartcenter          = true;
 
       useMidiRemote      = false;
       for (int i = 0; i < MIDI_REMOTES; ++i)
@@ -258,7 +259,6 @@ void Preferences::write()
       s.setValue("jackTimebaseMaster", jackTimebaseMaster);
       s.setValue("usePortaudioAudio",  usePortaudioAudio);
       s.setValue("usePulseAudio",      usePulseAudio);
-      s.setValue("midiPorts",          midiPorts);
       s.setValue("rememberLastMidiConnections", rememberLastConnections);
 
       s.setValue("alsaDevice",         alsaDevice);
@@ -280,6 +280,7 @@ void Preferences::write()
       s.setValue("startScore",         startScore);
       s.setValue("defaultStyle",       defaultStyleFile);
       s.setValue("showSplashScreen",   showSplashScreen);
+      s.setValue("showStartcenter1",    showStartcenter);
 
       s.setValue("midiExpandRepeats",  midiExpandRepeats);
       s.setValue("playRepeats",        MScore::playRepeats);
@@ -421,11 +422,11 @@ void Preferences::read()
       defaultStyleFile         = s.value("defaultStyle", defaultStyleFile).toString();
 
       showSplashScreen         = s.value("showSplashScreen", showSplashScreen).toBool();
+      showStartcenter          = s.value("showStartcenter1", showStartcenter).toBool();
       midiExpandRepeats        = s.value("midiExpandRepeats", midiExpandRepeats).toBool();
       MScore::playRepeats      = s.value("playRepeats", MScore::playRepeats).toBool();
       MScore::panPlayback      = s.value("panPlayback", MScore::panPlayback).toBool();
       alternateNoteEntryMethod = s.value("alternateNoteEntry", alternateNoteEntryMethod).toBool();
-      midiPorts                = s.value("midiPorts", midiPorts).toInt();
       rememberLastConnections  = s.value("rememberLastMidiConnections", rememberLastConnections).toBool();
       proximity                = s.value("proximity", proximity).toInt();
       autoSave                 = s.value("autoSave", autoSave).toBool();
@@ -570,6 +571,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
       myStylesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
       myTemplatesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
       myPluginsButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
+      mySoundfontsButton->setIcon(*icons[int(Icons::edit_ICON)]);
+      mySfzButton->setIcon(*icons[int(Icons::edit_ICON)]);
       myImagesButton->setIcon(*icons[int(Icons::fileOpen_ICON)]);
 
       bgWallpaperSelect->setIcon(*icons[int(Icons::fileOpen_ICON)]);
@@ -593,6 +596,8 @@ PreferenceDialog::PreferenceDialog(QWidget* parent)
 #ifndef USE_PULSEAUDIO
       pulseaudioDriver->setVisible(false);
 #endif
+
+      tabIO->setEnabled(!noSeq);
 
       QButtonGroup* fgButtons = new QButtonGroup(this);
       fgButtons->setExclusive(true);
@@ -835,6 +840,7 @@ void PreferenceDialog::updateValues()
             }
       sessionScore->setText(prefs.startScore);
       showSplashScreen->setChecked(prefs.showSplashScreen);
+      showStartcenter->setChecked(prefs.showStartcenter);
       expandRepeats->setChecked(prefs.midiExpandRepeats);
       instrumentList1->setText(prefs.instrumentList1);
       instrumentList2->setText(prefs.instrumentList2);
@@ -848,7 +854,6 @@ void PreferenceDialog::updateValues()
             case MusicxmlExportBreaks::NO:      exportNoBreaks->setChecked(true); break;
             }
 
-      midiPorts->setValue(prefs.midiPorts);
       rememberLastMidiConnections->setChecked(prefs.rememberLastConnections);
       proximity->setValue(prefs.proximity);
       autoSave->setChecked(prefs.autoSave);
@@ -1037,11 +1042,17 @@ void PreferenceDialog::updateSCListView()
                   newItem->setIcon(0, *icons[int(s->icon())]);
             newItem->setText(1, s->keysToString());
             newItem->setData(0, Qt::UserRole, s->key());
-            QString accessibleInfo = tr("Action: %1; Shortcut: %2").arg(newItem->text(0)).arg(newItem->text(1).isEmpty() ? tr("No shortcut defined") : newItem->text(1));
+            QString accessibleInfo = tr("Action: %1; Shortcut: %2")
+               .arg(newItem->text(0)).arg(newItem->text(1).isEmpty()
+                  ? tr("No shortcut defined") : newItem->text(1));
             newItem->setData(0, Qt::AccessibleTextRole, accessibleInfo);
             newItem->setData(1, Qt::AccessibleTextRole, accessibleInfo);
-            if (enableExperimental || (strncmp(s->key(), "media", 5) != 0 && strncmp(s->key(), "layer", 5) != 0 && strncmp(s->key(), "insert-fretframe", 16) != 0))
-                shortcutList->addTopLevelItem(newItem);
+            if (enableExperimental
+                        || (!s->key().startsWith("media")
+                            && !s->key().startsWith("layer")
+                            && !s->key().startsWith("insert-fretframe"))) {
+                  shortcutList->addTopLevelItem(newItem);
+                  }
             }
       shortcutList->resizeColumnToContents(0);
       }
@@ -1171,7 +1182,7 @@ void PreferenceDialog::selectStartWith()
          this,
          tr("Choose Starting Score"),
          sessionScore->text(),
-         tr("MuseScore Files (*.mscz *.mscx *.msc);;All (*)")
+         tr("MuseScore Files (*.mscz *.mscx);;All (*)")
          );
       if (!s.isNull())
             sessionScore->setText(s);
@@ -1267,7 +1278,6 @@ void PreferenceDialog::apply()
 
       prefs.useJackTransport   = jackDriver->isChecked() && useJackTransport->isChecked();
       prefs.jackTimebaseMaster = becomeTimebaseMaster->isChecked();
-      prefs.midiPorts          = midiPorts->value();
       prefs.rememberLastConnections = rememberLastMidiConnections->isChecked();
 
       bool wasJack = (prefs.useJackMidi || prefs.useJackAudio);
@@ -1309,16 +1319,23 @@ void PreferenceDialog::apply()
             prefs.alsaPeriodSize     = alsaPeriodSize->currentText().toInt();
             prefs.alsaFragments      = alsaFragments->value();
             preferences = prefs;
-            Driver* driver = driverFactory(seq, "");
             if (seq) {
-                  seq->setDriver(driver);
+                  Driver* driver = driverFactory(seq, "");
+                  if (driver) {
+                        // Updating synthesizer's sample rate
+                        if (seq->synti()) {
+                              seq->synti()->setSampleRate(driver->sampleRate());
+                              seq->synti()->init();
+                              }
+                        seq->setDriver(driver);
+                        }
                   if (!seq->init())
                         qDebug("sequencer init failed");
                   }
             }
 
 #ifdef USE_PORTAUDIO
-      if (usePortaudio) {
+      if (usePortaudio && !noSeq) {
             Portaudio* audio = static_cast<Portaudio*>(seq->driver());
             prefs.portaudioDevice = audio->deviceIndex(portaudioApi->currentIndex(),
                portaudioDevice->currentIndex());
@@ -1350,6 +1367,7 @@ void PreferenceDialog::apply()
       prefs.exportAudioSampleRate = exportAudioSampleRates[idx];
 
       prefs.showSplashScreen   = showSplashScreen->isChecked();
+      prefs.showStartcenter    = showStartcenter->isChecked();
       prefs.midiExpandRepeats  = expandRepeats->isChecked();
       prefs.instrumentList1    = instrumentList1->text();
       prefs.instrumentList2    = instrumentList2->text();
@@ -1441,7 +1459,7 @@ void PreferenceDialog::apply()
 
       genIcons();
 
-      mscore->setIconSize(QSize(prefs.iconWidth, prefs.iconHeight));
+      mscore->setIconSize(QSize(prefs.iconWidth * guiScaling, prefs.iconHeight * guiScaling));
 
       preferences = prefs;
       emit preferencesChanged();

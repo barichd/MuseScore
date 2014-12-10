@@ -56,8 +56,10 @@ class TestCopyPaste : public QObject, public MTest
       void copyPaste2Voice3() { copypastevoice("15", 1); }
       void copyPaste2Voice4() { copypastevoice("16",1); } // shorten last cr
       void copyPaste2Voice5();                            // cut and move
+      void copypaste2Voice6();
       void copyPasteOnlySecondVoice();
       void copypaste19() { copypaste("19"); }       // chord symbols
+      
 
       void copypastestaff50() { copypastestaff("50"); }       // staff & slurs
 
@@ -97,15 +99,16 @@ void TestCopyPaste::copypaste(const char* idx)
       QString mimeType = score->selection().mimeType();
       QVERIFY(!mimeType.isEmpty());
       QMimeData* mimeData = new QMimeData;
-      mimeData->setData(mimeType, score->selection().mimeData());
+      QByteArray ba = score->selection().mimeData();
+      mimeData->setData(mimeType, ba);
       QApplication::clipboard()->setMimeData(mimeData);
+      QVERIFY(m4->first()->element(0) != 0);
       score->select(m4->first()->element(0));
 
       score->startCmd();
       score->cmdPaste(mimeData,0);
-      score->endCmd();
-
       score->doLayout();
+      score->endCmd();
 
       QVERIFY(saveCompareScore(score, QString("copypaste%1.mscx").arg(idx),
          DIR + QString("copypaste%1-ref.mscx").arg(idx)));
@@ -150,7 +153,8 @@ void TestCopyPaste::copypastestaff(const char* idx)
       delete score;
       }
 
-void TestCopyPaste::copyPastePartial() {
+void TestCopyPaste::copyPastePartial()
+      {
       Score* score = readScore(DIR + QString("copypaste_partial_01.mscx"));
       score->doLayout();
 
@@ -180,7 +184,7 @@ void TestCopyPaste::copyPastePartial() {
       QVERIFY(saveCompareScore(score, QString("copypaste_partial_01.mscx"),
          DIR + QString("copypaste_partial_01-ref.mscx")));
       delete score;
-}
+      }
 
 void TestCopyPaste::copyPaste2Voice()
       {
@@ -341,6 +345,47 @@ void TestCopyPaste::copyPasteOnlySecondVoice()
 
       QVERIFY(saveCompareScore(score, QString("copypaste18.mscx"),
          DIR + QString("copypaste18-ref.mscx")));
+      delete score;
+      }
+
+void TestCopyPaste::copypaste2Voice6()
+      {
+      Score* score = readScore(DIR + QString("copypaste20.mscx"));
+      score->doLayout();
+      Measure* m1 = score->firstMeasure();
+
+      QVERIFY(m1 != 0);
+
+      // create a range selection from 2nd eighth note to the end of first measure
+      Segment::Type segTypeCR = Segment::Type::ChordRest;
+      Segment* s = m1->first(segTypeCR)->next1(segTypeCR);
+      score->select(static_cast<Chord*>(s->element(0))->notes().at(0));
+
+      s = m1->last()->prev(Segment::Type::ChordRest);
+      score->select(s->element(1), SelectType::RANGE);
+
+      QVERIFY(score->selection().canCopy());
+      QString mimeType = score->selection().mimeType();
+      QVERIFY(!mimeType.isEmpty());
+      QMimeData* mimeData = new QMimeData;
+      mimeData->setData(mimeType, score->selection().mimeData());
+      QApplication::clipboard()->setMimeData(mimeData);
+
+      //paste to 16th rest
+      Element* dest = m1->first(segTypeCR)->next(segTypeCR)->next(segTypeCR)->next(segTypeCR)->next(segTypeCR)->element(0);
+      qDebug() << int(dest->type());
+      QVERIFY(dest->type() == Element::Type::REST
+              && static_cast<ChordRest*>(dest)->durationType() == TDuration::DurationType::V_16TH);
+      score->select(dest);
+
+      score->startCmd();
+      score->cmdPaste(mimeData,0);
+      score->endCmd();
+
+      score->doLayout();
+
+      QVERIFY(saveCompareScore(score, QString("copypaste20.mscx"),
+         DIR + QString("copypaste20-ref.mscx")));
       delete score;
       }
 

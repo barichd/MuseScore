@@ -66,7 +66,16 @@
    </item>
    <item>
     <layout class="QGridLayout" name="gridLayout">
-     <property name="spacing">
+     <property name="leftMargin">
+      <number>3</number>
+     </property>
+     <property name="rightMargin">
+      <number>3</number>
+     </property>
+     <property name="horizontalSpacing">
+      <number>3</number>
+     </property>
+     <property name="verticalSpacing">
       <number>0</number>
      </property>
      <item row="2" column="1" colspan="2">
@@ -100,7 +109,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Grow Right</string>
+        <string>Grow right</string>
        </property>
       </widget>
      </item>
@@ -113,7 +122,7 @@
         </sizepolicy>
        </property>
        <property name="text">
-        <string>Grow Left</string>
+        <string>Grow left</string>
        </property>
       </widget>
      </item>
@@ -139,7 +148,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>left</string>
+        <string>Left</string>
        </property>
        <property name="accessibleName">
         <string>Vertical position offset left</string>
@@ -188,16 +197,6 @@
        <property name="text">
         <string>...</string>
        </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
-       </property>
       </widget>
      </item>
      <item row="8" column="2">
@@ -209,7 +208,7 @@
         </sizepolicy>
        </property>
        <property name="toolTip">
-        <string>right</string>
+        <string>Right</string>
        </property>
        <property name="accessibleName">
         <string>Vertical position offset right</string>
@@ -237,7 +236,7 @@
         </sizepolicy>
        </property>
        <property name="accessibleName">
-        <string>Grow Left</string>
+        <string>Grow left</string>
        </property>
        <property name="singleStep">
         <double>0.250000000000000</double>
@@ -256,20 +255,10 @@
         </sizepolicy>
        </property>
        <property name="accessibleName">
-        <string>Reset Grow Right value</string>
+        <string>Reset Grow right value</string>
        </property>
        <property name="text">
         <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
        </property>
       </widget>
      </item>
@@ -282,20 +271,10 @@
         </sizepolicy>
        </property>
        <property name="accessibleName">
-        <string>Reset Grow Left value</string>
+        <string>Reset Grow left value</string>
        </property>
        <property name="text">
         <string>...</string>
-       </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
        </property>
       </widget>
      </item>
@@ -308,7 +287,7 @@
         </sizepolicy>
        </property>
        <property name="accessibleName">
-        <string>Grow Right</string>
+        <string>Grow right</string>
        </property>
        <property name="singleStep">
         <double>0.250000000000000</double>
@@ -332,16 +311,6 @@
        <property name="text">
         <string>...</string>
        </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
-       </property>
       </widget>
      </item>
      <item row="1" column="0" colspan="3">
@@ -350,10 +319,10 @@
         <enum>Qt::TabFocus</enum>
        </property>
        <property name="accessibleName">
-        <string>Local Relayout</string>
+        <string>Local relayout</string>
        </property>
        <property name="text">
-        <string>Local Relayout</string>
+        <string>Local relayout</string>
        </property>
       </widget>
      </item>
@@ -371,16 +340,6 @@
        <property name="text">
         <string>...</string>
        </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
-       </property>
       </widget>
      </item>
      <item row="6" column="0" colspan="3">
@@ -389,10 +348,10 @@
         <enum>Qt::TabFocus</enum>
        </property>
        <property name="accessibleName">
-        <string>User Position</string>
+        <string>User position</string>
        </property>
        <property name="text">
-        <string>User Position</string>
+        <string>User position</string>
        </property>
       </widget>
      </item>
@@ -423,16 +382,6 @@
        <property name="text">
         <string>...</string>
        </property>
-       <property name="icon">
-        <iconset resource="../musescore.qrc">
-         <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>14</width>
-         <height>14</height>
-        </size>
-       </property>
       </widget>
      </item>
     </layout>
@@ -455,8 +404,6 @@
   <tabstop>y1</tabstop>
   <tabstop>y2</tabstop>
  </tabstops>
- <resources>
-  <include location="../musescore.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

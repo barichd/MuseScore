@@ -60,6 +60,36 @@ JackAudio::~JackAudio()
       }
 
 //---------------------------------------------------------
+//   updateOutPortCount
+//   Add/remove JACK MIDI Out ports
+//---------------------------------------------------------
+
+void JackAudio::updateOutPortCount(int maxport)
+      {
+      if (!preferences.useJackMidi || maxport == midiOutputPorts.size())
+            return;
+      if (MScore::debugMode)
+            qDebug()<<"JACK number of ports:"<<midiOutputPorts.size()<<", change to:"<<maxport;
+
+      bool oldremember = preferences.rememberLastConnections;
+      preferences.rememberLastConnections = true;
+
+      if (maxport > midiOutputPorts.size()) {
+            for (int i = midiOutputPorts.size(); i < maxport; ++i)
+                  registerPort(QString("mscore-midi-%1").arg(i+1), false, true);
+            restoreMidiConnections();
+            }
+      else if (maxport < midiOutputPorts.size()) {
+            rememberMidiConnections();
+            for(int i = midiOutputPorts.size() - 1; i >= maxport; --i) {
+                  unregisterPort(midiOutputPorts[i]);
+                  midiOutputPorts.removeAt(i);
+                  }
+            }
+      preferences.rememberLastConnections = oldremember;
+      }
+
+//---------------------------------------------------------
 //   registerPort
 //---------------------------------------------------------
 
@@ -342,9 +372,9 @@ int JackAudio::processAudio(jack_nframes_t frames, void* p)
                               if (nn && (type == ME_CLOCK || type == ME_SENSE))
                                     continue;
                               Event e;
-                              e.setType(type);
                               e.setChannel(type & 0xf);
                               type &= 0xf0;
+                              e.setType(type);
                               if (type == ME_NOTEON || type == ME_NOTEOFF) {
                                     e.setPitch(event.buffer[1]);
                                     e.setVelo(event.buffer[2]);
@@ -442,8 +472,7 @@ bool JackAudio::init(bool hot)
             }
 
       if (preferences.useJackMidi) {
-            for (int i = 0; i < preferences.midiPorts; ++i)
-                  registerPort(QString("mscore-midi-%1").arg(i+1), false, true);
+            registerPort(QString("mscore-midi-1"), false, true);
             registerPort(QString("mscore-midiin-1"), true, true);
             }
       return true;
@@ -625,7 +654,7 @@ void JackAudio::handleTimeSigTempoChanged()
 
 void JackAudio::checkTransportSeek(int cur_frame, int nframes, bool inCountIn)
       {
-      if (!seq || !seq->score() || !seq->canStart() || inCountIn)
+      if (!seq || !seq->score() || inCountIn)
             return;
 
       // Obtaining the current JACK Transport position
@@ -908,25 +937,11 @@ void JackAudio::hotPlug()
 
       // Midi connections
       if (preferences.useJackMidi) {
-            if (midiOutputPorts.size()<preferences.midiPorts) {
-                  for (int i = midiOutputPorts.size(); i < preferences.midiPorts; ++i)
-                        registerPort(QString("mscore-midi-%1").arg(i+1), false, true);
-                  }
-            else if (midiOutputPorts.size()>preferences.midiPorts) {
-                  for(int i = midiOutputPorts.size()-1; i>=preferences.midiPorts; --i) {
-                        unregisterPort(midiOutputPorts[i]);
-                        midiOutputPorts.removeAt(i);
-                        }
-                  }
-
             if (midiInputPorts.size() == 0)
                   registerPort(QString("mscore-midiin-1"), true, true);
             }
       else { // No midi
-            foreach(jack_port_t* mp, midiOutputPorts) {
-                  unregisterPort(mp);
-                  midiOutputPorts.removeOne(mp);
-                  }
+            updateOutPortCount(0);
             if (midiInputPorts.size() != 0) {
                   unregisterPort(midiInputPorts[0]);
                   midiInputPorts.removeOne(midiInputPorts[0]);

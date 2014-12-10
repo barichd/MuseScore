@@ -58,32 +58,32 @@ TextTools::TextTools(QWidget* parent)
       setAllowedAreas(Qt::DockWidgetAreas(Qt::TopDockWidgetArea | Qt::BottomDockWidgetArea));
 
       QToolBar* tb = new QToolBar(tr("Text Edit"));
-      tb->setIconSize(QSize(preferences.iconWidth, preferences.iconHeight));
+      tb->setIconSize(QSize(preferences.iconWidth * guiScaling, preferences.iconHeight * guiScaling));
 
       showKeyboard = getAction("show-keys");
       showKeyboard->setCheckable(true);
       tb->addAction(showKeyboard);
 
       typefaceBold = tb->addAction(*icons[int(Icons::textBold_ICON)], "");
-      typefaceBold->setToolTip(tr("bold"));
+      typefaceBold->setToolTip(tr("Bold"));
       typefaceBold->setCheckable(true);
 
       typefaceItalic = tb->addAction(*icons[int(Icons::textItalic_ICON)], "");
-      typefaceItalic->setToolTip(tr("italic"));
+      typefaceItalic->setToolTip(tr("Italic"));
       typefaceItalic->setCheckable(true);
 
       typefaceUnderline = tb->addAction(*icons[int(Icons::textUnderline_ICON)], "");
-      typefaceUnderline->setToolTip(tr("underline"));
+      typefaceUnderline->setToolTip(tr("Underline"));
       typefaceUnderline->setCheckable(true);
 
       tb->addSeparator();
 
       typefaceSubscript   = tb->addAction(*icons[int(Icons::textSub_ICON)], "");
-      typefaceSubscript->setToolTip(tr("subscript"));
+      typefaceSubscript->setToolTip(tr("Subscript"));
       typefaceSubscript->setCheckable(true);
 
       typefaceSuperscript = tb->addAction(*icons[int(Icons::textSuper_ICON)], "");
-      typefaceSuperscript->setToolTip(tr("superscript"));
+      typefaceSuperscript->setToolTip(tr("Superscript"));
       typefaceSuperscript->setCheckable(true);
 
       tb->addSeparator();

@@ -37,37 +37,37 @@ struct Acc {
       };
 
 static Acc accList[] = {
-      Acc("none",                QT_TRANSLATE_NOOP("accidental", "none"),                AccidentalVal::NATURAL, 0,    SymId::noSym),
-      Acc("sharp",               QT_TRANSLATE_NOOP("accidental", "sharp"),               AccidentalVal::SHARP,   0,    SymId::accidentalSharp),
-      Acc("flat",                QT_TRANSLATE_NOOP("accidental", "flat"),                AccidentalVal::FLAT,    0,    SymId::accidentalFlat),
-      Acc("double sharp",        QT_TRANSLATE_NOOP("accidental", "double sharp"),        AccidentalVal::SHARP2,  0,    SymId::accidentalDoubleSharp),
-      Acc("double flat",         QT_TRANSLATE_NOOP("accidental", "double flat"),         AccidentalVal::FLAT2,   0,    SymId::accidentalDoubleFlat),
-      Acc("natural",             QT_TRANSLATE_NOOP("accidental", "natural"),             AccidentalVal::NATURAL, 0,    SymId::accidentalNatural),
+      Acc("none",                QT_TRANSLATE_NOOP("accidental", "None"),                AccidentalVal::NATURAL, 0,    SymId::noSym),
+      Acc("sharp",               QT_TRANSLATE_NOOP("accidental", "Sharp"),               AccidentalVal::SHARP,   0,    SymId::accidentalSharp),
+      Acc("flat",                QT_TRANSLATE_NOOP("accidental", "Flat"),                AccidentalVal::FLAT,    0,    SymId::accidentalFlat),
+      Acc("double sharp",        QT_TRANSLATE_NOOP("accidental", "Double sharp"),        AccidentalVal::SHARP2,  0,    SymId::accidentalDoubleSharp),
+      Acc("double flat",         QT_TRANSLATE_NOOP("accidental", "Double flat"),         AccidentalVal::FLAT2,   0,    SymId::accidentalDoubleFlat),
+      Acc("natural",             QT_TRANSLATE_NOOP("accidental", "Natural"),             AccidentalVal::NATURAL, 0,    SymId::accidentalNatural),
 
-      Acc("flat-slash",          QT_TRANSLATE_NOOP("accidental", "flat-slash"),          AccidentalVal::NATURAL, -50,  SymId::accidentalBakiyeFlat),
-      Acc("flat-slash2",         QT_TRANSLATE_NOOP("accidental", "flat-slash2"),         AccidentalVal::NATURAL, 0,    SymId::accidentalBuyukMucennebFlat),
-      Acc("mirrored-flat2",      QT_TRANSLATE_NOOP("accidental", "mirrored-flat2"),      AccidentalVal::NATURAL, -150, SymId::accidentalThreeQuarterTonesFlatZimmermann),
-      Acc("mirrored-flat",       QT_TRANSLATE_NOOP("accidental", "mirrored-flat"),       AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatStein),
-      Acc("mirrored-flat-slash", QT_TRANSLATE_NOOP("accidental", "mirrored-flat-slash"), AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
-      Acc("flat-flat-slash",     QT_TRANSLATE_NOOP("accidental", "flat-flat-slash"),     AccidentalVal::NATURAL, -150, SymId::noSym), //TODO-smufl
+      Acc("flat-slash",          QT_TRANSLATE_NOOP("accidental", "Flat-slash"),          AccidentalVal::NATURAL, -50,  SymId::accidentalBakiyeFlat),
+      Acc("flat-slash2",         QT_TRANSLATE_NOOP("accidental", "Flat-slash2"),         AccidentalVal::NATURAL, 0,    SymId::accidentalBuyukMucennebFlat),
+      Acc("mirrored-flat2",      QT_TRANSLATE_NOOP("accidental", "Mirrored-flat2"),      AccidentalVal::NATURAL, -150, SymId::accidentalThreeQuarterTonesFlatZimmermann),
+      Acc("mirrored-flat",       QT_TRANSLATE_NOOP("accidental", "Mirrored-flat"),       AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatStein),
+      Acc("mirrored-flat-slash", QT_TRANSLATE_NOOP("accidental", "Mirrored-flat-slash"), AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
+      Acc("flat-flat-slash",     QT_TRANSLATE_NOOP("accidental", "Flat-flat-slash"),     AccidentalVal::NATURAL, -150, SymId::noSym), //TODO-smufl
 
-      Acc("sharp-slash",         QT_TRANSLATE_NOOP("accidental", "sharp-slash"),         AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpStein),
-      Acc("sharp-slash2",        QT_TRANSLATE_NOOP("accidental", "sharp-slash2"),        AccidentalVal::NATURAL, 0,    SymId::accidentalBuyukMucennebSharp),
-      Acc("sharp-slash3",        QT_TRANSLATE_NOOP("accidental", "sharp-slash3"),        AccidentalVal::NATURAL, 0,    SymId::accidentalKucukMucennebSharp),
-      Acc("sharp-slash4",        QT_TRANSLATE_NOOP("accidental", "sharp-slash4"),        AccidentalVal::NATURAL, 150,  SymId::accidentalThreeQuarterTonesSharpStein),
+      Acc("sharp-slash",         QT_TRANSLATE_NOOP("accidental", "Sharp-slash"),         AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpStein),
+      Acc("sharp-slash2",        QT_TRANSLATE_NOOP("accidental", "Sharp-slash2"),        AccidentalVal::NATURAL, 0,    SymId::accidentalBuyukMucennebSharp),
+      Acc("sharp-slash3",        QT_TRANSLATE_NOOP("accidental", "Sharp-slash3"),        AccidentalVal::NATURAL, 0,    SymId::accidentalKucukMucennebSharp),
+      Acc("sharp-slash4",        QT_TRANSLATE_NOOP("accidental", "Sharp-slash4"),        AccidentalVal::NATURAL, 150,  SymId::accidentalThreeQuarterTonesSharpStein),
 
-      Acc("sharp arrow up",      QT_TRANSLATE_NOOP("accidental", "sharp arrow up"),      AccidentalVal::NATURAL, 150,  SymId::accidentalThreeQuarterTonesSharpArrowUp),
-      Acc("sharp arrow down",    QT_TRANSLATE_NOOP("accidental", "sharp arrow down"),    AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpArrowDown),
-      Acc("sharp arrow both",    QT_TRANSLATE_NOOP("accidental", "sharp arrow both"),    AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
-      Acc("flat arrow up",       QT_TRANSLATE_NOOP("accidental", "flat arrow up"),       AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatArrowUp),
-      Acc("flat arrow down",     QT_TRANSLATE_NOOP("accidental", "flat arrow down"),     AccidentalVal::NATURAL, -150, SymId::accidentalThreeQuarterTonesFlatArrowDown),
-      Acc("flat arrow both",     QT_TRANSLATE_NOOP("accidental", "flat arrow both"),     AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
-      Acc("natural arrow up",    QT_TRANSLATE_NOOP("accidental", "natural arrow up"),    AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpNaturalArrowUp),
-      Acc("natural arrow down",  QT_TRANSLATE_NOOP("accidental", "natural arrow down"),  AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatNaturalArrowDown),
-      Acc("natural arrow both",  QT_TRANSLATE_NOOP("accidental", "natural arrow both"),  AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
+      Acc("sharp arrow up",      QT_TRANSLATE_NOOP("accidental", "Sharp arrow up"),      AccidentalVal::NATURAL, 150,  SymId::accidentalThreeQuarterTonesSharpArrowUp),
+      Acc("sharp arrow down",    QT_TRANSLATE_NOOP("accidental", "Sharp arrow down"),    AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpArrowDown),
+      Acc("sharp arrow both",    QT_TRANSLATE_NOOP("accidental", "Sharp arrow both"),    AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
+      Acc("flat arrow up",       QT_TRANSLATE_NOOP("accidental", "Flat arrow up"),       AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatArrowUp),
+      Acc("flat arrow down",     QT_TRANSLATE_NOOP("accidental", "Flat arrow down"),     AccidentalVal::NATURAL, -150, SymId::accidentalThreeQuarterTonesFlatArrowDown),
+      Acc("flat arrow both",     QT_TRANSLATE_NOOP("accidental", "Flat arrow both"),     AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
+      Acc("natural arrow up",    QT_TRANSLATE_NOOP("accidental", "Natural arrow up"),    AccidentalVal::NATURAL, 50,   SymId::accidentalQuarterToneSharpNaturalArrowUp),
+      Acc("natural arrow down",  QT_TRANSLATE_NOOP("accidental", "Natural arrow down"),  AccidentalVal::NATURAL, -50,  SymId::accidentalQuarterToneFlatNaturalArrowDown),
+      Acc("natural arrow both",  QT_TRANSLATE_NOOP("accidental", "Natural arrow both"),  AccidentalVal::NATURAL, 0,    SymId::noSym), //TODO-smufl
 
-      Acc("sori",                QT_TRANSLATE_NOOP("accidental", "sori"),                AccidentalVal::NATURAL, 50,   SymId::accidentalSori),
-      Acc("koron",               QT_TRANSLATE_NOOP("accidental", "koron"),               AccidentalVal::NATURAL, -50,  SymId::accidentalKoron)
+      Acc("sori",                QT_TRANSLATE_NOOP("accidental", "Sori"),                AccidentalVal::NATURAL, 50,   SymId::accidentalSori),
+      Acc("koron",               QT_TRANSLATE_NOOP("accidental", "Koron"),               AccidentalVal::NATURAL, -50,  SymId::accidentalKoron)
       };
 
 //---------------------------------------------------------
@@ -296,8 +296,10 @@ void Accidental::layout()
       el.clear();
 
       QRectF r;
-      if (staff() && staff()->isTabStaff()) {      //in TAB, accidentals are not shown
-            setbbox(QRectF());
+      // don't show accidentals for tab or slash notation
+      if ((staff() && staff()->isTabStaff())
+          || (note() && note()->fixed())) {
+            setbbox(r);
             return;
             }
 
@@ -308,9 +310,9 @@ void Accidental::layout()
 
       m = magS();
       if (_hasBracket) {
-            SymElement e(SymId::noteheadParenthesisLeft, 0.0);
+            SymElement e(SymId::accidentalParensLeft, 0.0);
             el.append(e);
-            r |= symBbox(SymId::noteheadParenthesisLeft);
+            r |= symBbox(SymId::accidentalParensLeft);
             }
 
       SymId s = symbol();
@@ -321,9 +323,9 @@ void Accidental::layout()
 
       if (_hasBracket) {
             x = r.x()+r.width();
-            SymElement e(SymId::noteheadParenthesisRight, x);
+            SymElement e(SymId::accidentalParensRight, x);
             el.append(e);
-            r |= symBbox(SymId::noteheadParenthesisRight).translated(x, 0.0);
+            r |= symBbox(SymId::accidentalParensRight).translated(x, 0.0);
             }
       setbbox(r);
       }
@@ -385,8 +387,11 @@ Accidental::Type Accidental::name2subtype(const QString& tag)
 
 void Accidental::draw(QPainter* painter) const
       {
-      if (staff() && staff()->isTabStaff())        //in TAB, accidentals are not shown
+      // don't show accidentals for tab or slash notation
+      if ((staff() && staff()->isTabStaff())
+          || (note() && note()->fixed())) {
             return;
+            }
       painter->setPen(curColor());
       foreach(const SymElement& e, el)
             score()->scoreFont()->draw(e.sym, painter, magS(), QPointF(e.x, 0.0));

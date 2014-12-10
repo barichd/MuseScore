@@ -67,12 +67,11 @@
 #include "instrtemplate.h"
 #include "cursor.h"
 #include "sym.h"
+#include "rehearsalmark.h"
 
 namespace Ms {
 
 Score* gscore;                 ///< system score, used for palettes etc.
-QPoint scorePos(0,0);
-QSize  scoreSize(950, 500);
 
 bool scriptDebug     = false;
 bool noSeq           = false;
@@ -323,6 +322,7 @@ void Score::init()
       _tempomap               = 0;
       _layoutMode             = LayoutMode::PAGE;
       _noteHeadWidth          = 0.0;      // set in doLayout()
+      _midiPortCount          = 0;
       }
 
 //---------------------------------------------------------
@@ -403,6 +403,7 @@ Score::Score(Score* parent, const MStyle* s)
 
 Score::~Score()
       {
+      _midiPortCount = 0;
       foreach(MuseScoreView* v, viewer)
             v->removeScore();
       // deselectAll();
@@ -472,9 +473,11 @@ void Score::fixTicks()
 
       for (Staff* staff : _staves)
             staff->clearTimeSig();
+
       TimeSigMap* smap = sigmap();
       Fraction sig(fm->len());
       Fraction nsig(fm->timesig());
+
       if (!parentScore()) {
             tempomap()->clear();
             smap->clear();
@@ -494,7 +497,7 @@ void Score::fixTicks()
             if (m->mmRest())
                   m->mmRest()->moveTicks(diff);
 
-            if (!parentScore()) {
+//            if (!parentScore()) {
                   //
                   //  implement section break rest
                   //
@@ -515,8 +518,8 @@ void Score::fixTicks()
                                           staff(staffIdx)->addTimeSig(ts);
                                     }
                               }
-                        else if (s->segmentType() == Segment::Type::ChordRest) {
-                              foreach(Element* e, s->annotations()) {
+                        else if (!parentScore() && (s->segmentType() == Segment::Type::ChordRest)) {
+                              foreach (Element* e, s->annotations()) {
                                     if (e->type() == Element::Type::TEMPO_TEXT) {
                                           const TempoText* tt = static_cast<const TempoText*>(e);
                                           setTempo(tt->segment(), tt->tempo());
@@ -544,7 +547,7 @@ void Score::fixTicks()
                                     }
                               }
                         }
-                  }
+//                  }
 
             //
             // update time signature map
@@ -553,6 +556,7 @@ void Score::fixTicks()
                   sig = m->len();
                   smap->add(tick, SigEvent(sig, m->timesig(),  m->no()));
                   }
+
             tick += measureTicks;
             }
       if (tempomap()->empty())
@@ -895,6 +899,7 @@ void Score::rebuildMidiMapping()
       int port    = 0;
       int channel = 0;
       int idx     = 0;
+      int maxport = 0;
       foreach(Part* part, _parts) {
             InstrumentList* il = part->instrList();
             for (auto i = il->begin(); i != il->end(); ++i) {
@@ -902,6 +907,8 @@ void Score::rebuildMidiMapping()
                   for (int k = 0; k < i->second.channel().size(); ++k) {
                         Channel* a = &(i->second.channel(k));
                         MidiMapping mm;
+                        if (port > maxport)
+                              maxport = port;
                         if (drum != DrumsetKind::NONE) {
                               mm.port    = port;
                               mm.channel = 9;
@@ -927,6 +934,31 @@ void Score::rebuildMidiMapping()
                         }
                   }
             }
+      setMidiPortCount(maxport);
+      }
+
+//---------------------------------------------------------
+//   midiPortCount
+//---------------------------------------------------------
+
+int Score::midiPortCount() const {
+      const Score* root = rootScore();
+      if (this == root)
+            return _midiPortCount;
+      else
+            return root->midiPortCount();
+      }
+
+//---------------------------------------------------------
+//   setMidiPortCount
+//---------------------------------------------------------
+
+void Score::setMidiPortCount(int maxport) {
+      Score* root = rootScore();
+      if (this == root)
+            _midiPortCount = maxport;
+      else
+            root->setMidiPortCount(maxport);
       }
 
 //---------------------------------------------------------
@@ -1738,79 +1770,16 @@ void Score::scanElements(void* data, void (*func)(void*, Element*), bool all)
             page->scanElements(data, func, all);
       }
 
+//---------------------------------------------------------
+//   scanElementsInRange
+//---------------------------------------------------------
+
 void Score::scanElementsInRange(void* data, void (*func)(void*, Element*), bool all)
       {
       Segment* startSeg = _selection.startSegment();
       for (Segment* s = startSeg; s && s!=_selection.endSegment(); s = s->next1MM()) {
             s->scanElements(data,func,all);
             }
-      }
-
-//---------------------------------------------------------
-//   customKeySigIdx
-//    try to find custom key signature in table,
-//    return index or -1 if not found
-//---------------------------------------------------------
-
-int Score::customKeySigIdx(KeySig* ks) const
-      {
-      int idx = 0;
-      foreach(KeySig* k, customKeysigs) {
-            if (*k == *ks)
-                  return idx;
-            ++idx;
-            }
-      qDebug("  not found");
-      return -1;
-      }
-
-//---------------------------------------------------------
-//   addCustomKeySig
-//---------------------------------------------------------
-
-int Score::addCustomKeySig(KeySig* ks)
-      {
-      customKeysigs.append(ks);
-      int idx = customKeysigs.size() - 1;
-      KeySigEvent k = ks->keySigEvent();
-      k.setCustomType(idx);
-      ks->setKeySigEvent(k);
-      ks->setScore(this);
-      return idx;
-      }
-
-//---------------------------------------------------------
-//   customKeySig
-//---------------------------------------------------------
-
-KeySig* Score::customKeySig(int idx) const
-      {
-      return customKeysigs.value(idx);
-      }
-
-//---------------------------------------------------------
-//   keySigFactory
-//---------------------------------------------------------
-
-KeySig* Score::keySigFactory(const KeySigEvent& e)
-      {
-      KeySig* ks;
-      if (!e.isValid())
-            return 0;
-      if (e.custom()) {
-            KeySig* cks = customKeysigs.value(e.customType());
-            if (cks)
-                  ks = new KeySig(*cks);
-            else {
-                  qDebug("Score::keySigFactory: invalid custom key index");
-                  return 0;
-                  }
-            }
-      else {
-            ks = new KeySig(this);
-            ks->setKeySigEvent(e);
-            }
-      return ks;
       }
 
 //---------------------------------------------------------
@@ -1918,20 +1887,6 @@ TimeSigMap* Score::sigmap() const
       }
 
 //---------------------------------------------------------
-//   metaTags
-//---------------------------------------------------------
-
-const QMap<QString, QString>& Score::metaTags() const
-      {
-      return _metaTags;
-      }
-
-QMap<QString, QString>& Score::metaTags()
-      {
-      return _metaTags;
-      }
-
-//---------------------------------------------------------
 //   metaTag
 //---------------------------------------------------------
 
@@ -1957,7 +1912,8 @@ void Score::setMetaTag(const QString& tag, const QString& val)
 
 void Score::addExcerpt(Score* score)
       {
-      Excerpt* ex = new Excerpt(score);
+      Excerpt* ex = new Excerpt(this);
+      ex->setPartScore(score);
       excerpts().append(ex);
       ex->setTitle(score->name());
       foreach(Staff* s, score->staves()) {
@@ -1981,7 +1937,7 @@ void Score::addExcerpt(Score* score)
 void Score::removeExcerpt(Score* score)
       {
       foreach (Excerpt* ex, excerpts()) {
-            if (ex->score() == score) {
+            if (ex->partScore() == score) {
                   if (excerpts().removeOne(ex)) {
                         delete ex;
                         return;
@@ -2118,8 +2074,22 @@ void Score::removeAudio()
 
 bool Score::appendScore(Score* score)
       {
+      if (parts().size() != score->parts().size() || staves().size() != score->staves().size())
+            return false;
       TieMap  tieMap;
 
+      MeasureBase* lastMeasure = last();
+      int tickLen = lastMeasure->endTick();
+
+      if (!lastMeasure->lineBreak() && !lastMeasure->pageBreak()) {
+            lastMeasure->undoSetBreak(true, LayoutBreak::Type::LINE);
+            }
+
+      if (!lastMeasure->sectionBreak()) {
+            lastMeasure->undoSetBreak(true, LayoutBreak::Type::SECTION);
+            }
+
+      // clone the measures
       MeasureBaseList* ml = &score->_measures;
       for (MeasureBase* mb = ml->first(); mb; mb = mb->next()) {
             MeasureBase* nmb;
@@ -2133,6 +2103,41 @@ bool Score::appendScore(Score* score)
             _measures.add(nmb);
             }
       fixTicks();
+
+      for (Staff* st : score->staves()) {
+            for (auto k : *(st->keyList())) {
+                  int tick = k.first;
+                  KeySigEvent key = k.second;
+                  int staffIdx = score->staffIdx(st);
+                  staff(staffIdx)->setKey(tick + tickLen, key);
+                  }
+            }
+
+      // clone the spanners
+      for (auto sp : score->spanner()) {
+            Spanner* spanner = sp.second;
+            Spanner* ns = static_cast<Spanner*>(spanner->clone());
+            ns->setScore(this);
+            ns->setParent(0);
+            ns->setTick(spanner->tick() + tickLen);
+            ns->setTick2(spanner->tick2() + tickLen);
+            if (ns->type() == Element::Type::SLUR) {
+                  // set start/end element for slur
+                  ns->setStartElement(0);
+                  ns->setEndElement(0);
+                  Measure* sm = tick2measure(ns->tick());
+                  if (sm)
+                        ns->setStartElement(sm->findChordRest(ns->tick(), ns->track()));
+                  Measure * em = tick2measure(ns->tick2());
+                  if (em)
+                        ns->setEndElement(em->findChordRest(ns->tick2(), ns->track2()));
+                  if (!ns->startElement())
+                        qDebug("clone Slur: no start element");
+                  if (!ns->endElement())
+                        qDebug("clone Slur: no end element");
+                  }
+            addElement(ns);
+            }
       setLayoutAll(true);
       return true;
       }
@@ -2161,7 +2166,7 @@ void Score::splitStaff(int staffIdx, int splitPoint)
       clef->setParent(seg);
       undoAddElement(clef);
 
-      undoChangeKeySig(ns, 0, s->key(0));
+      undoChangeKeySig(ns, 0, s->keySigEvent(0));
 
       rebuildMidiMapping();
       _instrumentsChanged = true;
@@ -2413,15 +2418,17 @@ void Score::adjustKeySigs(int sidx, int eidx, KeyList km)
             for (auto i = km.begin(); i != km.end(); ++i) {
                   int tick = i->first;
                   Measure* measure = tick2measure(tick);
-                  Key oKey = i->second;
-                  Key nKey = oKey;
+                  if (!measure)
+                        continue;
+                  KeySigEvent oKey = i->second;
+                  KeySigEvent nKey = oKey;
                   int diff = -staff->part()->instr()->transpose().chromatic;
-                  if (diff != 0 && !styleB(StyleIdx::concertPitch))
-                        nKey = transposeKey(nKey, diff);
+                  if (diff != 0 && !styleB(StyleIdx::concertPitch) && !oKey.custom())
+                        nKey.setKey(transposeKey(nKey.key(), diff));
                   staff->setKey(tick, nKey);
                   KeySig* keysig = new KeySig(this);
                   keysig->setTrack(staffIdx * VOICES);
-                  keysig->setKey(nKey);
+                  keysig->setKeySigEvent(nKey);
                   Segment* s = measure->getSegment(keysig, tick);
                   s->add(keysig);
                   }
@@ -2634,22 +2641,19 @@ void Score::padToggle(Pad n)
                   }
             }
 
-      Element* el = selection().element();
-      if (el->type() == Element::Type::NOTE)
-            el = el->parent();
-      if (!el->isChordRest())
+      ChordRest* cr = selection().cr();
+      if (!cr)
             return;
 
-      ChordRest* cr = static_cast<ChordRest*>(el);
       if (cr->type() == Element::Type::CHORD && (static_cast<Chord*>(cr)->noteType() != NoteType::NORMAL)) {
             //
             // handle appoggiatura and acciaccatura
             //
-            undo(new ChangeDurationType(cr, _is.duration()));
-            undo(new ChangeDuration(cr, _is.duration().fraction()));
+            undoChangeChordRestLen(cr, _is.duration());
             }
       else
             changeCRlen(cr, _is.duration());
+
       }
 
 //---------------------------------------------------------
@@ -2673,7 +2677,9 @@ void Score::select(Element* e, SelectType type, int staffIdx)
             Element* ee = e;
             if (ee->type() == Element::Type::NOTE)
                   ee = ee->parent();
-            setPlayPos(static_cast<ChordRest*>(ee)->segment()->tick());
+            int tick = static_cast<ChordRest*>(ee)->segment()->tick();
+            if (playPos() != tick)
+                  setPlayPos(tick);
             }
       if (MScore::debugMode)
             qDebug("select element <%s> type %hhd(state %hhd) staff %d",
@@ -2897,6 +2903,9 @@ void Score::selectRange(Element* e, int staffIdx)
 
       _selection.setActiveTrack(activeTrack);
 
+      if (_selection.startSegment())
+            setPlayPos(_selection.startSegment()->tick());
+
       _selection.updateSelectedElements();
       }
 
@@ -2909,12 +2918,27 @@ void Score::collectMatch(void* data, Element* e)
       ElementPattern* p = static_cast<ElementPattern*>(data);
       if (p->type != int(e->type()))
             return;
-      if (p->subtypeValid && p->subtype != e->subtype())
-            return;
+
+      if (p->subtypeValid) {
+            // HACK: grace note is different from normal note
+            // TODO: this disables the ability to distinguish note heads in subtype
+
+            if (p->type == int(Element::Type::NOTE)) {
+                  if (p->subtype != static_cast<Note*>(e)->chord()->isGrace())
+                        return;
+                  }
+            else {
+                  if (p->subtype != e->subtype())
+                        return;
+                  }
+            }
       if ((p->staffStart != -1)
           && ((p->staffStart > e->staffIdx()) || (p->staffEnd <= e->staffIdx())))
             return;
-      if (e->type() == Element::Type::CHORD || e->type() == Element::Type::REST || e->type() == Element::Type::NOTE || e->type() == Element::Type::LYRICS || e->type() == Element::Type::STEM) {
+      if (e->type() == Element::Type::CHORD || e->type() == Element::Type::REST
+         || e->type() == Element::Type::NOTE || e->type() == Element::Type::LYRICS
+         || e->type() == Element::Type::BEAM
+         || e->type() == Element::Type::STEM) {
             if (p->voice != -1 && p->voice != e->voice())
                   return;
             }
@@ -2942,9 +2966,19 @@ void Score::selectSimilar(Element* e, bool sameStaff)
       Score* score = e->score();
 
       ElementPattern pattern;
-      pattern.type    = int(type);
-      pattern.subtype = 0;
-      pattern.subtypeValid = false;
+      pattern.type = int(type);
+      if (type == Element::Type::NOTE) {
+            pattern.subtype = static_cast<Note*>(e)->chord()->isGrace();
+            pattern.subtypeValid = true;
+            }
+      else if (type == Element::Type::SLUR_SEGMENT) {
+            pattern.subtype = static_cast<int>(static_cast<SlurSegment*>(e)->spanner()->type());
+            pattern.subtypeValid = true;
+            }
+      else {
+            pattern.subtype = 0;
+            pattern.subtypeValid = false;
+            }
       pattern.staffStart = sameStaff ? e->staffIdx() : -1;
       pattern.staffEnd = sameStaff ? e->staffIdx()+1 : -1;
       pattern.voice   = -1;
@@ -3163,8 +3197,12 @@ void Score::cmdSelectAll()
       if (_measures.size() == 0)
             return;
       deselectAll();
-      selectRange(firstMeasureMM(), 0);
-      selectRange(lastMeasureMM(), nstaves() - 1);
+      Measure* first = firstMeasureMM();
+      if (!first)
+            return;
+      Measure* last = lastMeasureMM();
+      selectRange(first, 0);
+      selectRange(last, nstaves() - 1);
       setUpdateAll(true);
       end();
       }
@@ -3247,8 +3285,10 @@ QList<Score*> Score::scoreList()
       QList<Score*> scores;
       Score* root = rootScore();
       scores.append(root);
-      for (const Excerpt* ex : root->excerpts())
-            scores.append(ex->score());
+      for (const Excerpt* ex : root->excerpts()) {
+            if (ex->partScore())
+                  scores.append(ex->partScore());
+            }
       return scores;
       }
 
@@ -3406,10 +3446,12 @@ void Score::setPos(POS pos, int tick)
       {
       if (tick < 0)
             tick = 0;
-      if (tick != _pos[int(pos)]) {
+      if (tick != _pos[int(pos)])
             _pos[int(pos)] = tick;
-            emit posChanged(pos, unsigned(tick));
-            }
+      // even though tick position might not have changed, layout might have
+      // so we should update cursor here
+      // however, we must be careful not to call setPos() again while handling posChanged, or recursion results
+      emit posChanged(pos, unsigned(tick));
       }
 
 //---------------------------------------------------------
@@ -3519,6 +3561,86 @@ void Score::setSoloMute()
                         }
                   }
             }
+      }
+
+//---------------------------------------------------------
+//   setName
+//---------------------------------------------------------
+
+void Score::setName(QString s)
+      {
+      s.replace('/', '_');    // for sanity
+      if (!(s.endsWith(".mscz") || s.endsWith(".mscx")))
+            s += ".mscz";
+      info.setFile(s);
+      }
+
+//---------------------------------------------------------
+//   setImportedFilePath
+//---------------------------------------------------------
+
+void Score::setImportedFilePath(const QString& filePath)
+      {
+      _importedFilePath = filePath;
+      }
+
+//---------------------------------------------------------
+//   title
+//---------------------------------------------------------
+
+QString Score::title()
+      {
+      QString fn = metaTag("workTitle");
+      if (fn.isEmpty())
+            fn = fileInfo()->baseName();
+      else
+            return fn;
+      Text* t = getText(TextStyleType::TITLE);
+      if (t)
+            fn = QTextDocumentFragment::fromHtml(t->text()).toPlainText().replace("&amp;","&").replace("&gt;",">").replace("&lt;","<").replace("&quot;", "\"");
+      if (fn.isEmpty())
+            fn = "Untitled";
+      return fn.simplified();
+      }
+
+//---------------------------------------------------------
+//   createRehearsalmarkText
+//---------------------------------------------------------
+
+QString Score::createRehearsalmarkText(int tick) const
+      {
+      RehearsalMark* before = 0;
+      RehearsalMark* after = 0;
+      for (Segment* s = firstSegment(); s; s = s->next1()) {
+            for (Element* e : s->annotations()) {
+                  if (e && e->type() == Element::Type::REHEARSAL_MARK) {
+                        if (s->tick() < tick)
+                              before = static_cast<RehearsalMark*>(e);
+                        else if (s->tick() > tick) {
+                              after = static_cast<RehearsalMark*>(e);
+                              break;
+                              }
+                        }
+                  }
+            if (after)
+                  break;
+            }
+      QString s = "A";
+      QString s1 = before ? before->text() : "";
+      QString s2 = after ? after->text()  : "";
+//      qDebug("createRehearsalMark <%s> xx <%s>", qPrintable(s1), qPrintable(s2));
+      if (s1.isEmpty())
+            return s;
+      if (!s2.isEmpty()) {
+            s = s1[0];
+            if (s1.size() > 1)
+                  s += QChar::fromLatin1(s1[1].toLatin1() + 1);
+            else
+                  s += QChar::fromLatin1('1');
+            }
+      else
+            s = QChar::fromLatin1(s1[0].toLatin1() + 1);
+      return s;
       }
 
 }

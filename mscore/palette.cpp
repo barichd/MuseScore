@@ -41,6 +41,11 @@
 
 namespace Ms {
 
+PaletteCell::~PaletteCell()
+      {
+      delete element;
+      }
+
 //---------------------------------------------------------
 //   needsStaff
 //    should a staff been drawn if e is used as icon in
@@ -143,6 +148,15 @@ void Palette::setReadOnly(bool val)
       }
 
 //---------------------------------------------------------
+//   setMag
+//---------------------------------------------------------
+
+void Palette::setMag(qreal val)
+      {
+      extraMag = val * guiScaling;
+      }
+
+//---------------------------------------------------------
 //   contextMenuEvent
 //---------------------------------------------------------
 
@@ -152,7 +166,7 @@ void Palette::contextMenuEvent(QContextMenuEvent* event)
       if (i == -1) {
             // palette context menu
             QMenu menu;
-            QAction* moreAction = menu.addAction(tr("Show More..."));
+            QAction* moreAction = menu.addAction(tr("More Elements..."));
             moreAction->setEnabled(_moreElements);
             QAction* action = menu.exec(mapToGlobal(event->pos()));
             if (action == moreAction)
@@ -165,7 +179,7 @@ void Palette::contextMenuEvent(QContextMenuEvent* event)
       QAction* contextAction = menu.addAction(tr("Properties..."));
       clearAction->setEnabled(!_readOnly);
       contextAction->setEnabled(!_readOnly);
-      QAction* moreAction    = menu.addAction(tr("Show More..."));
+      QAction* moreAction    = menu.addAction(tr("More Elements..."));
       moreAction->setEnabled(_moreElements);
 
       if (cells[i] && cells[i]->readOnly)
@@ -175,10 +189,8 @@ void Palette::contextMenuEvent(QContextMenuEvent* event)
 
       if (action == clearAction) {
             PaletteCell* cell = cells[i];
-            if (cell) {
-                  delete cell->element;
+            if (cell)
                   delete cell;
-                  }
             cells[i] = 0;
             emit changed();
             }
@@ -212,8 +224,8 @@ void Palette::contextMenuEvent(QContextMenuEvent* event)
 
 void Palette::setGrid(int hh, int vv)
       {
-      hgrid = hh;
-      vgrid = vv;
+      hgrid = hh * guiScaling;
+      vgrid = vv * guiScaling;
       QSize s(hgrid, vgrid);
       setSizeIncrement(s);
       setBaseSize(s);
@@ -293,7 +305,6 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
       if (score == 0)
             return;
       const Selection& sel = score->selection();
-
       if (sel.isNone())
             return;
 
@@ -302,8 +313,8 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
             element = cells[i]->element;
       if (element == 0)
             return;
-      ScoreView* viewer = mscore->currentScoreView();
 
+      ScoreView* viewer = mscore->currentScoreView();
       if (viewer->mscoreState() != STATE_EDIT
          && viewer->mscoreState() != STATE_LYRICS_EDIT
          && viewer->mscoreState() != STATE_HARMONY_FIGBASS_EDIT
@@ -311,8 +322,28 @@ void Palette::mouseDoubleClickEvent(QMouseEvent* ev)
             score->startCmd();
             }
       if (sel.isList()) {
-            foreach(Element* e, sel.elements())
-                  applyDrop(score, viewer, e, element);
+            if (viewer->mscoreState() == STATE_NOTE_ENTRY_DRUM && element->type() == Element::Type::CHORD) {
+                  // use input position rather than selection if possible
+                  Element* e = score->inputState().cr();
+                  if (!e)
+                        e = sel.elements().first();
+                  if (e) {
+                        // get note if selection was full chord
+                        if (e->type() == Element::Type::CHORD)
+                              e = static_cast<Chord*>(e)->upNote();
+                        // use voice of element being added to (otherwise we can might corrupt the measure)
+                        element->setTrack(e->voice());
+                        applyDrop(score, viewer, e, element);
+                        // continue in same track
+                        score->inputState().setTrack(e->track());
+                        }
+                  else
+                        qDebug("nowhere to place drum note");
+                  }
+            else {
+                  foreach(Element* e, sel.elements())
+                        applyDrop(score, viewer, e, element);
+                  }
             }
       else if (sel.isRange()) {
             // TODO: check for other element types:
@@ -853,6 +884,9 @@ void Palette::dropEvent(QDropEvent* event)
                               SlurTie* st = static_cast<SlurTie*>(e);
                               st->setTrack(0);
                               }
+//                        else if (e->type() == Element::Type::KEYSIG) {
+//                              KeySig* k = static_cast<KeySig*>(e);
+//                              }
                         }
                   }
             }
@@ -904,10 +938,10 @@ void Palette::dropEvent(QDropEvent* event)
 void Palette::write(Xml& xml) const
       {
       xml.stag(QString("Palette name=\"%1\"").arg(Xml::xmlString(_name)));
-      xml.tag("gridWidth", hgrid);
-      xml.tag("gridHeight", vgrid);
+      xml.tag("gridWidth", hgrid / guiScaling);
+      xml.tag("gridHeight", vgrid / guiScaling);
       if (extraMag != 1.0)
-            xml.tag("mag", extraMag);
+            xml.tag("mag", extraMag / guiScaling);
       if (_drawGrid)
             xml.tag("grid", _drawGrid);
 
@@ -984,8 +1018,10 @@ bool Palette::read(const QString& p)
             path += ".mpal";
 
       MQZipReader f(path);
-      if (!f.exists())
+      if (!f.exists()) {
+            qDebug("palette <%s> not found", qPrintable(path));
             return false;
+            }
       clear();
 
       QByteArray ba = f.fileData("META-INF/container.xml");
@@ -1147,11 +1183,11 @@ void Palette::read(XmlReader& e)
       while (e.readNextStartElement()) {
             const QStringRef& t(e.name());
             if (t == "gridWidth")
-                  hgrid = e.readDouble();
+                  hgrid = e.readDouble() * guiScaling;
             else if (t == "gridHeight")
-                  vgrid = e.readDouble();
+                  vgrid = e.readDouble() * guiScaling;
             else if (t == "mag")
-                  extraMag = e.readDouble();
+                  extraMag = e.readDouble() * guiScaling;
             else if (t == "grid")
                   _drawGrid = e.readInt();
             else if (t == "moreElements")
@@ -1294,12 +1330,12 @@ PaletteProperties::PaletteProperties(Palette* p, QWidget* parent)
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
       name->setText(palette->name());
-      cellWidth->setValue(palette->gridWidth());
-      cellHeight->setValue(palette->gridHeight());
+      cellWidth->setValue(palette->gridWidth() / guiScaling);
+      cellHeight->setValue(palette->gridHeight() / guiScaling);
       showGrid->setChecked(palette->drawGrid());
       moreElements->setChecked(palette->moreElements());
       elementOffset->setValue(palette->yOffset());
-      mag->setValue(palette->mag());
+      mag->setValue(palette->mag() / guiScaling);
       }
 
 //---------------------------------------------------------

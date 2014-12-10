@@ -49,8 +49,7 @@ TextStyleDialog::TextStyleDialog(QWidget* parent, Score* score)
 
       textNames->clear();
       for (int i = 0, n = styles.size(); i < n; ++i) {
-//            const TextStyle& s = styles.at(i);
-            if ( (styles.at(i).hidden()& TextStyleHidden::IN_EDITOR) == 0) {
+            if ( (styles.at(i).hidden() & TextStyleHidden::IN_EDITOR) == 0) {
                   int count = textNames->count();
                   textNames->addItem(qApp->translate("TextStyle", styles.at(i).name().toLatin1().data()));
                   textNames->item(count)->setData(Qt::UserRole, i);
@@ -188,7 +187,7 @@ void TextStyleDialog::applyToAllParts()
       saveStyle(current);     // update local copy of style list
       QList<Excerpt*>& el = cs->rootScore()->excerpts();
       for (Excerpt* e : el)
-            applyToScore(e->score());
+            applyToScore(e->partScore());
       }
 
 //---------------------------------------------------------
@@ -198,7 +197,7 @@ void TextStyleDialog::applyToAllParts()
 void TextStyleDialog::newClicked()
       {
       QString s = QInputDialog::getText(this, tr("MuseScore: Read Style Name"),
-         tr("Text Style Name:"));
+         tr("Text style name:"));
       if (s.isEmpty())
             return;
       for (;;) {
@@ -213,7 +212,7 @@ void TextStyleDialog::newClicked()
             if (!notFound) {
                   s = QInputDialog::getText(this,
                      tr("MuseScore: Read Style Name"),
-                     QString(tr("'%1' does already exist,\nplease choose a different name:")).arg(s)
+                     tr("'%1' does already exist,\nplease choose a different name:").arg(s)
                      );
                   if (s.isEmpty())
                         return;
@@ -224,8 +223,7 @@ void TextStyleDialog::newClicked()
       //
       // use current selected style as template
       //
-      QString name = textNames->currentItem()->text();
-      TextStyle newStyle = cs->textStyle(name);
+      TextStyle newStyle = styles.at(textNames->currentItem()->data(Qt::UserRole).toInt());
       newStyle.setName(s);
 
       int count = textNames->count();

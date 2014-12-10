@@ -56,9 +56,7 @@ KeySig::KeySig(const KeySig& k)
    : Element(k)
       {
       _showCourtesy = k._showCourtesy;
-      foreach(KeySym* ks, k.keySymbols)
-            keySymbols.append(new KeySym(*ks));
-      _sig = k._sig;
+      _sig          = k._sig;
       _hideNaturals = false;
       }
 
@@ -72,25 +70,15 @@ qreal KeySig::mag() const
       }
 
 //---------------------------------------------------------
-//   setCustom
-//---------------------------------------------------------
-
-void KeySig::setCustom(const QList<KeySym*>& symbols)
-      {
-      _sig.setCustomType(0);
-      keySymbols = symbols;
-      }
-
-//---------------------------------------------------------
 //   add
 //---------------------------------------------------------
 
 void KeySig::addLayout(SymId sym, qreal x, int line)
       {
-      KeySym* ks = new KeySym;
-      ks->sym    = sym;
-      ks->spos   = QPointF(x, qreal(line) * .5);
-      keySymbols.append(ks);
+      KeySym ks;
+      ks.sym    = sym;
+      ks.spos   = QPointF(x, qreal(line) * .5);
+      _sig.keySymbols().append(ks);
       }
 
 //---------------------------------------------------------
@@ -102,22 +90,17 @@ void KeySig::layout()
       qreal _spatium = spatium();
       setbbox(QRectF());
 
-      if (staff() && !staff()->genKeySig()) {     // no key sigs on TAB staves
-            qDeleteAll(keySymbols);
-            keySymbols.clear();
-            return;
-            }
-
       if (isCustom()) {
-            foreach(KeySym* ks, keySymbols) {
-                  ks->pos = ks->spos * _spatium;
-                  addbbox(symBbox(ks->sym).translated(ks->pos));
+            for (KeySym& ks: _sig.keySymbols()) {
+                  ks.pos = ks.spos * _spatium;
+                  addbbox(symBbox(ks.sym).translated(ks.pos));
                   }
             return;
             }
 
-      qDeleteAll(keySymbols);
-      keySymbols.clear();
+      _sig.keySymbols().clear();
+      if (staff() && !staff()->genKeySig())     // no key sigs on TAB staves
+            return;
 
       // determine current clef for this staff
       ClefType clef = ClefType::G;
@@ -153,6 +136,11 @@ void KeySig::layout()
           naturalsOn =
             (prevMeas && prevMeas->sectionBreak() == nullptr
             && (score()->styleI(StyleIdx::keySigNaturals) != int(KeySigNatural::NONE) || t1 == 0) );
+
+      // Don't repeat naturals if shown in courtesy
+      if (prevMeas && prevMeas->findSegment(Segment::Type::KeySigAnnounce, measure()->tick()) != 0
+          && segment()->segmentType() != Segment::Type::KeySigAnnounce )
+            naturalsOn = false;
 
       int coffset = 0;
       Key t2      = Key::C;
@@ -248,10 +236,9 @@ void KeySig::layout()
             }
 
       // compute bbox
-      setbbox(QRectF());
-      for (KeySym* ks : keySymbols) {
-            ks->pos = ks->spos * _spatium;
-            addbbox(symBbox(ks->sym).translated(ks->pos));
+      for (KeySym& ks : _sig.keySymbols()) {
+            ks.pos = ks.spos * _spatium;
+            addbbox(symBbox(ks.sym).translated(ks.pos));
             }
       }
 
@@ -262,8 +249,8 @@ void KeySig::layout()
 void KeySig::draw(QPainter* p) const
       {
       p->setPen(curColor());
-      foreach(const KeySym* ks, keySymbols)
-            drawSymbol(ks->sym, p, QPointF(ks->pos.x(), ks->pos.y()));
+      for (const KeySym& ks: _sig.keySymbols())
+            drawSymbol(ks.sym, p, QPointF(ks.pos.x(), ks.pos.y()));
       }
 
 //---------------------------------------------------------
@@ -287,19 +274,16 @@ Element* KeySig::drop(const DropData& data)
             return 0;
             }
       KeySigEvent k = ks->keySigEvent();
-      if (k.custom() && (score()->customKeySigIdx(ks) == -1))
-            score()->addCustomKeySig(ks);
-      else
-            delete ks;
+      delete ks;
       if (data.modifiers & Qt::ControlModifier) {
             // apply only to this stave
-            if (k != keySigEvent())
-                  score()->undoChangeKeySig(staff(), tick(), k.key());
+            if (!(k == keySigEvent()))
+                  score()->undoChangeKeySig(staff(), tick(), k);
             }
       else {
             // apply to all staves:
             foreach(Staff* s, score()->rootScore()->staves())
-                  score()->undoChangeKeySig(s, tick(), k.key());
+                  score()->undoChangeKeySig(s, tick(), k);
             }
       return this;
       }
@@ -333,11 +317,11 @@ void KeySig::write(Xml& xml) const
       xml.stag(name());
       Element::writeProperties(xml);
       if (_sig.custom()) {
-            xml.tag("custom", _sig.customType());
-            foreach(const KeySym* ks, keySymbols) {
+            xml.tag("custom", 1);
+            for (const KeySym& ks : _sig.keySymbols()) {
                   xml.stag("KeySym");
-                  xml.tag("sym", int(ks->sym));
-                  xml.tag("pos", ks->spos);
+                  xml.tag("sym", Sym::id2name(ks.sym));
+                  xml.tag("pos", ks.spos);
                   xml.etag();
                   }
             }
@@ -361,17 +345,29 @@ void KeySig::read(XmlReader& e)
       while (e.readNextStartElement()) {
             const QStringRef& tag(e.name());
             if (tag == "KeySym") {
-                  KeySym* ks = new KeySym;
+                  KeySym ks;
                   while (e.readNextStartElement()) {
                         const QStringRef& tag(e.name());
-                        if (tag == "sym")
-                              ks->sym = SymId(e.readInt());
+                        if (tag == "sym") {
+                              QString val(e.readElementText());
+                              bool valid;
+                              SymId id = SymId(val.toInt(&valid));
+                              if (!valid)
+                                    id = Sym::name2id(val);
+                              if (score()->mscVersion() <= 114) {
+                                    if (valid)
+                                          id = KeySig::convertFromOldId(val.toInt(&valid));
+                                    else
+                                          id = Sym::oldName2id(val);
+                                    }
+                              ks.sym = id;
+                              }
                         else if (tag == "pos")
-                              ks->spos = e.readPoint();
+                              ks.spos = e.readPoint();
                         else
                               e.unknown();
                         }
-                  keySymbols.append(ks);
+                  _sig.keySymbols().append(ks);
                   }
             else if (tag == "showCourtesySig")
                   _showCourtesy = e.readInt();
@@ -381,15 +377,61 @@ void KeySig::read(XmlReader& e)
                   _sig.setKey(Key(e.readInt()));
             else if (tag == "natural")                // obsolete
                   e.readInt();
-            else if (tag == "custom")
-                  _sig.setCustomType(e.readInt());
+            else if (tag == "custom") {
+                  e.readInt();
+                  _sig.setCustom(true);
+                  }
             else if (tag == "subtype")
                   subtype = e.readInt();
             else if (!Element::readProperties(e))
                   e.unknown();
             }
-      if (_sig.invalid())
+      if (!_sig.isValid())
             _sig.initFromSubtype(subtype);     // for backward compatibility
+      }
+
+//---------------------------------------------------------
+//   convertFromOldId
+//
+//    for import of 1.3 scores
+//---------------------------------------------------------
+
+SymId KeySig::convertFromOldId(int val) const
+      {
+      SymId symId = SymId::noSym;
+      switch (val) {
+            case 32: symId = SymId::accidentalSharp; break;
+            case 33: symId = SymId::accidentalThreeQuarterTonesSharpArrowUp; break;
+            case 34: symId = SymId::accidentalQuarterToneSharpArrowDown; break;
+            // case 35: // "sharp arrow both" missing in SMuFL
+            case 36: symId = SymId::accidentalQuarterToneSharpStein; break;
+            case 37: symId = SymId::accidentalBuyukMucennebSharp; break;
+            case 38: symId = SymId::accidentalKomaSharp; break;
+            case 39: symId = SymId::accidentalThreeQuarterTonesSharpStein; break;
+            case 40: symId = SymId::accidentalNatural; break;
+            case 41: symId = SymId::accidentalQuarterToneSharpNaturalArrowUp; break;
+            case 42: symId = SymId::accidentalQuarterToneFlatNaturalArrowDown; break;
+            // case 43: // "natural arrow both" missing in SMuFL
+            case 44: symId = SymId::accidentalFlat; break;
+            case 45: symId = SymId::accidentalQuarterToneFlatArrowUp; break;
+            case 46: symId = SymId::accidentalThreeQuarterTonesFlatArrowDown; break;
+            // case 47: // "flat arrow both" missing in SMuFL
+            case 48: symId = SymId::accidentalBakiyeFlat; break;
+            case 49: symId = SymId::accidentalBuyukMucennebFlat; break;
+            case 50: symId = SymId::accidentalThreeQuarterTonesFlatZimmermann; break;
+            case 51: symId = SymId::accidentalQuarterToneFlatStein; break;
+            // case 52: // "mirrored flat slash" missing in SMuFL
+            case 53: symId = SymId::accidentalDoubleFlat; break;
+            // case 54: // "flat flat slash" missing in SMuFL
+            case 55: symId = SymId::accidentalDoubleSharp; break;
+            case 56: symId = SymId::accidentalSori; break;
+            case 57: symId = SymId::accidentalKoron; break;
+            default:
+                  qDebug("MuseScore 1.3 symbol id corresponding to <%d> not found", val);
+                  symId = SymId::noSym;
+                  break;
+            }
+      return symId;
       }
 
 //---------------------------------------------------------
@@ -398,25 +440,6 @@ void KeySig::read(XmlReader& e)
 
 bool KeySig::operator==(const KeySig& k) const
       {
-      bool ct1 = customType() != 0;
-      bool ct2 = k.customType() != 0;
-      if (ct1 != ct2)
-            return false;
-
-      if (ct1) {
-            int n = keySymbols.size();
-            if (n != k.keySymbols.size())
-                  return false;
-            for (int i = 0; i < n; ++i) {
-                  KeySym* ks1 = keySymbols[i];
-                  KeySym* ks2 = k.keySymbols[i];
-                  if (ks1->sym != ks2->sym)
-                        return false;
-                  if (ks1->spos != ks2->spos)
-                        return false;
-                  }
-            return true;
-            }
       return _sig == k._sig;
       }
 
@@ -428,16 +451,6 @@ void KeySig::changeKeySigEvent(const KeySigEvent& t)
       {
       if (_sig == t)
             return;
-      if (t.custom()) {
-            KeySig* ks = _score->customKeySig(t.customType());
-            if (!ks)
-                  return;
-            foreach(KeySym* k, keySymbols)
-                  delete k;
-            keySymbols.clear();
-            foreach(KeySym* k, ks->keySymbols)
-                  keySymbols.append(new KeySym(*k));
-            }
       setKeySigEvent(t);
       }
 

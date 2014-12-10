@@ -29,6 +29,7 @@
 #include "segment.h"
 #include "stafftype.h"
 #include "icon.h"
+#include "image.h"
 
 namespace Ms {
 
@@ -63,6 +64,11 @@ Rest::Rest(const Rest& r, bool link)
       _sym     = r._sym;
       dotline  = r.dotline;
       _mmWidth = r._mmWidth;
+      }
+
+Rest::~Rest()
+      {
+      qDeleteAll(_el);
       }
 
 //---------------------------------------------------------
@@ -203,6 +209,7 @@ bool Rest::acceptDrop(const DropData& data) const
          || (type == Element::Type::REHEARSAL_MARK)
          || (type == Element::Type::FRET_DIAGRAM)
          || (type == Element::Type::TREMOLOBAR)
+         || (type == Element::Type::IMAGE)
          || (type == Element::Type::SYMBOL)
          ) {
             return true;
@@ -258,6 +265,13 @@ Element* Rest::drop(const DropData& data)
                         measure()->cmdInsertRepeatMeasure(staffIdx());
                         }
                   break;
+
+            case Element::Type::SYMBOL:
+            case Element::Type::IMAGE:
+                  e->setParent(this);
+                  score()->undoAddElement(e);
+                  return e;
+
             default:
                   return ChordRest::drop(data);
             }
@@ -317,7 +331,9 @@ void Rest::layout()
       {
       _space.setLw(0.0);
 
-      if (parent() && measure() && measure()->isMMRest()) {
+      for (Element* e : _el)
+            e->layout();
+      if (measure() && measure()->isMMRest()) {
             _space.setRw(point(score()->styleS(StyleIdx::minMMRestWidth)));
 
             static const qreal verticalLineWidth = .2;
@@ -534,6 +550,8 @@ void Rest::scanElements(void* data, void (*func)(void*, Element*), bool all)
       {
       func(data, this);
       ChordRest::scanElements(data, func, all);
+      for (Element* e : _el)
+            e->scanElements(data, func, all);
       }
 
 //---------------------------------------------------------
@@ -625,13 +643,133 @@ qreal Rest::stemPosX() const
       }
 
 //---------------------------------------------------------
+//   accent
+//---------------------------------------------------------
+
+bool Rest::accent()
+      {
+      return (voice() >= 2 && small());
+      }
+
+//---------------------------------------------------------
+//   setAccent
+//---------------------------------------------------------
+
+void Rest::setAccent(bool flag)
+      {
+      undoChangeProperty(P_ID::SMALL, flag);
+      if (voice() % 2 == 0) {
+            if (flag) {
+                  qreal yOffset = -(bbox().bottom());
+                  if (durationType() >= TDuration::DurationType::V_HALF)
+                        yOffset -= staff()->spatium() * 0.5;
+                  undoChangeProperty(P_ID::USER_OFF, QPointF(0.0, yOffset));
+                  }
+            else {
+                  undoChangeProperty(P_ID::USER_OFF, QPointF());
+                  }
+            }
+      }
+
+//---------------------------------------------------------
 //   accessibleInfo
 //---------------------------------------------------------
 
 QString Rest::accessibleInfo()
       {
       QString voice = tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
-      return QString("%1; %2; %3").arg(Element::accessibleInfo()).arg(durationUserName()).arg(voice);
+      return tr("%1; Duration: %2; %3").arg(Element::accessibleInfo()).arg(durationUserName()).arg(voice);
+      }
+
+//---------------------------------------------------------
+//   accessibleInfo
+//---------------------------------------------------------
+
+QString Rest::screenReaderInfo()
+      {
+      QString voice = tr("Voice: %1").arg(QString::number(track() % VOICES + 1));
+      return QString("%1 %2 %3").arg(Element::accessibleInfo()).arg(durationUserName()).arg(voice);
+      }
+
+//---------------------------------------------------------
+//   add
+//---------------------------------------------------------
+
+void Rest::add(Element* e)
+      {
+      e->setParent(this);
+      e->setTrack(track());
+
+      switch(e->type()) {
+            case Element::Type::SYMBOL:
+            case Element::Type::IMAGE:
+                  _el.push_back(e);
+                  break;
+            default:
+                  ChordRest::add(e);
+                  break;
+            }
+      }
+
+//---------------------------------------------------------
+//   remove
+//---------------------------------------------------------
+
+void Rest::remove(Element* e)
+      {
+      switch(e->type()) {
+            case Element::Type::SYMBOL:
+            case Element::Type::IMAGE:
+                  if (!_el.remove(e))
+                        qDebug("Rest::remove(): cannot find %s", e->name());
+                  break;
+            default:
+                  ChordRest::remove(e);
+                  break;
+            }
+      }
+
+//--------------------------------------------------
+//   Rest::write
+//---------------------------------------------------------
+
+void Rest::write(Xml& xml) const
+      {
+      xml.stag(name());
+      ChordRest::writeProperties(xml);
+      _el.write(xml);
+      xml.etag();
+      }
+
+//---------------------------------------------------------
+//   Rest::read
+//---------------------------------------------------------
+
+void Rest::read(XmlReader& e)
+      {
+      while (e.readNextStartElement()) {
+            const QStringRef& tag(e.name());
+            if (tag == "Symbol") {
+                  Symbol* s = new Symbol(score());
+                  s->setTrack(track());
+                  s->read(e);
+                  add(s);
+                  }
+            else if (tag == "Image") {
+                  if (MScore::noImages)
+                        e.skipCurrentElement();
+                  else {
+                        Image* image = new Image(score());
+                        image->setTrack(track());
+                        image->read(e);
+                        add(image);
+                        }
+                  }
+            else if (ChordRest::readProperties(e))
+                  ;
+            else
+                  e.unknown();
+            }
       }
 
 }

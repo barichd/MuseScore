@@ -23,7 +23,7 @@
 #include "synthesizer/msynthesizer.h"
 #include "mscore/musescoreCore.h"
 #include "mscore/shortcut.h"
-#include "mscore/importmidi_operations.h"
+#include "mscore/importmidi/importmidi_operations.h"
 #include "libmscore/xml.h"
 #include "libmscore/excerpt.h"
 
@@ -33,6 +33,7 @@ inline void initMyResources() {
       Q_INIT_RESOURCE(musescorefonts_Gonville);
       Q_INIT_RESOURCE(musescorefonts_Bravura);
       Q_INIT_RESOURCE(musescorefonts_MuseJazz);
+      Q_INIT_RESOURCE(musescorefonts_FreeSerif);
       Q_INIT_RESOURCE(musescorefonts_Free);
 }
 
@@ -58,7 +59,7 @@ MuseScoreCore* mscoreCore;
 MasterSynthesizer* synti;
 QString dataPath;
 QIcon* icons[0];
-Shortcut Shortcut::sc[1] = { Shortcut() };
+//Shortcut Shortcut::_sc[1] = { Shortcut() };
 QString mscoreGlobalShare;
 
 //---------------------------------------------------------
@@ -128,9 +129,10 @@ Score* MTest::readScore(const QString& name)
 Score* MTest::readCreatedScore(const QString& name)
       {
       Score* score = new Score(mscore->baseStyle());
-      score->setName(name);
+      QFileInfo fi(name);
+      score->setName(fi.completeBaseName());
 //      MScore::testMode = true;
-      QString csl  = score->fileInfo()->suffix().toLower();
+      QString csl  = fi.suffix().toLower();
 
       Score::FileError rv;
       if (csl == "cap")
@@ -162,7 +164,7 @@ Score* MTest::readCreatedScore(const QString& name)
             }
       score->updateNotes();
       for (Excerpt* e : score->excerpts())
-            e->score()->updateNotes();
+            e->partScore()->updateNotes();
       return score;
       }
 

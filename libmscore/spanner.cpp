@@ -173,6 +173,21 @@ void SpannerSegment::setVisible(bool f)
       }
 
 //---------------------------------------------------------
+//   setColor
+//---------------------------------------------------------
+
+void SpannerSegment::setColor(const QColor& col)
+      {
+      if (_spanner) {
+            for (SpannerSegment* ss : _spanner->spannerSegments())
+                  ss->_color = col;
+            _spanner->_color = col;
+            }
+      else
+            _color = col;
+      }
+
+//---------------------------------------------------------
 //   nextElement
 //---------------------------------------------------------
 
@@ -475,7 +490,6 @@ Chord* Spanner::endChord()
             if (_endElement->type() != Element::Type::CHORD)
                   _endElement = nullptr;
             }
-      Q_ASSERT(_endElement->type() == Element::Type::CHORD);
       return static_cast<Chord*>(_endElement);
       }
 
@@ -543,6 +557,17 @@ void Spanner::setVisible(bool f)
       for (SpannerSegment* ss : spannerSegments())
             ss->setVisible(f);
       _visible = f;
+      }
+
+//---------------------------------------------------------
+//   setColor
+//---------------------------------------------------------
+
+void Spanner::setColor(const QColor& col)
+      {
+      for (SpannerSegment* ss : spannerSegments())
+            ss->setColor(col);
+      _color = col;
       }
 
 //---------------------------------------------------------

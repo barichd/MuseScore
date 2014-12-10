@@ -91,24 +91,36 @@ void Score::write(Xml& xml, bool selectionOnly)
       // then some layout information is missing:
       // relayout with all parts set visible
 
+      QList<Part*> hiddenParts;
       bool unhide = false;
-      QList<bool> partsVisible;
       if (styleB(StyleIdx::createMultiMeasureRests)) {
             for (Part* part : _parts) {
-                  partsVisible.append(part->show());
                   if (!part->show()) {
-                        unhide = true;
-                        part->setShow(true);
+                        if (!unhide) {
+                              startCmd();
+                              unhide = true;
+                              }
+                        undo(new ChangePartProperty(part, 0, true));
+                        hiddenParts.append(part);
                         }
                   }
             }
       if (unhide) {
             doLayout();
-            for (int i = 0; i < partsVisible.size(); ++i)
-                  _parts[i]->setShow(partsVisible[i]);
+            for (Part* p : hiddenParts)
+                  p->setShow(false);
             }
 
       xml.stag("Score");
+      switch(_layoutMode) {
+            case LayoutMode::PAGE:
+            case LayoutMode::FLOAT:
+            case LayoutMode::SYSTEM:
+                  break;
+            case LayoutMode::LINE:
+                  xml.tag("layoutMode", "line");
+                  break;
+            }
 
 #ifdef OMR
       if (_omr && xml.writeOmr)
@@ -153,11 +165,8 @@ void Score::write(Xml& xml, bool selectionOnly)
       while (i.hasNext()) {
             i.next();
             if (!MScore::testMode  || (i.key() != "platform" && i.key() != "creationDate"))
-                  xml.tag(QString("metaTag name=\"%1\"").arg(i.key()), i.value());
+                  xml.tag(QString("metaTag name=\"%1\"").arg(i.key().toHtmlEscaped()), i.value());
             }
-
-      foreach(KeySig* ks, customKeysigs)
-            ks->write(xml);
 
       if (!selectionOnly) {
             xml.stag("PageList");
@@ -209,17 +218,20 @@ void Score::write(Xml& xml, bool selectionOnly)
             }
       xml.curTrack = -1;
       if (!selectionOnly) {
-            foreach(Excerpt* excerpt, _excerpts) {
-                  if (excerpt->score() != this)
-                        excerpt->score()->write(xml, false);       // recursion
+            for (const Excerpt* excerpt : _excerpts) {
+                  if (excerpt->partScore() != this)
+                        excerpt->partScore()->write(xml, false);       // recursion
                   }
             }
       if (parentScore())
             xml.tag("name", name());
       xml.etag();
 
-      if (unhide)
-            doLayout();
+      if (unhide) {
+            endCmd();
+            undo()->undo();
+            endUndoRedo();
+            }
       }
 
 //---------------------------------------------------------
@@ -259,6 +271,16 @@ void Score::readStaff(XmlReader& e)
                               measures()->add(measure);
                               e.setLastMeasure(measure);
                               e.initTick(measure->tick() + measure->ticks());
+                              }
+                        else {
+                              // this is a multi measure rest
+                              // always preceded by the first measure it replaces
+                              Measure* m = e.lastMeasure();
+
+                              if (m) {
+                                    m->setMMRest(measure);
+                                    measure->setTick(m->tick());
+                                    }
                               }
                         }
                   else if (tag == "HBox" || tag == "VBox" || tag == "TBox" || tag == "FBox") {
@@ -338,6 +360,8 @@ bool Score::saveFile()
                   }
             undo()->setClean();
             setDirty(false);
+            info.refresh();
+            update();
             return true;
             }
       //
@@ -416,6 +440,8 @@ bool Score::saveFile()
       undo()->setClean();
       setDirty(false);
       setSaved(true);
+      info.refresh();
+      update();
       return true;
       }
 
@@ -433,6 +459,31 @@ void Score::saveCompressedFile(QFileInfo& info, bool onlySelection)
             }
       saveCompressedFile(&fp, info, onlySelection);
       fp.close();
+      }
+
+//---------------------------------------------------------
+//   createThumbnail
+//---------------------------------------------------------
+
+QImage Score::createThumbnail()
+      {
+      Page* page = pages().at(0);
+      QRectF fr  = page->abbox();
+      qreal mag  = 256.0 / qMax(fr.width(), fr.height());
+      int w      = int(fr.width() * mag);
+      int h      = int(fr.height() * mag);
+
+      QImage pm(w, h, QImage::Format_ARGB32_Premultiplied);
+      pm.setDotsPerMeterX(lrint((mag * 1000) / INCH));
+      pm.setDotsPerMeterY(lrint((mag * 1000) / INCH));
+      pm.fill(0xffffffff);
+      QPainter p(&pm);
+      p.setRenderHint(QPainter::Antialiasing, true);
+      p.setRenderHint(QPainter::TextAntialiasing, true);
+      p.scale(mag, mag);
+      print(&p, 0);
+      p.end();
+      return pm;
       }
 
 //---------------------------------------------------------
@@ -468,12 +519,24 @@ void Score::saveCompressedFile(QIODevice* f, QFileInfo& info, bool onlySelection
 
       // save images
       //uz.addDirectory("Pictures");
-      foreach(ImageStoreItem* ip, imageStore) {
+      foreach (ImageStoreItem* ip, imageStore) {
             if (!ip->isUsed(this))
                   continue;
             QString path = QString("Pictures/") + ip->hashName();
             uz.addFile(path, ip->buffer());
             }
+
+      // create thumbnail
+      QImage pm = createThumbnail();
+
+      QByteArray ba;
+      QBuffer b(&ba);
+      if (!b.open(QIODevice::WriteOnly))
+            qDebug("open buffer failed");
+      if (!pm.save(&b, "PNG"))
+            qDebug("save failed");
+      uz.addFile("Thumbnails/thumbnail.png", ba);
+
 #ifdef OMR
       //
       // save OMR page images
@@ -591,10 +654,13 @@ void Score::saveFile(QIODevice* f, bool msczFormat, bool onlySelection)
       Xml xml(f);
       xml.writeOmr = msczFormat;
       xml.header();
-      xml.stag("museScore version=\"" MSC_VERSION "\"");
       if (!MScore::testMode) {
+            xml.stag("museScore version=\"" MSC_VERSION "\"");
             xml.tag("programVersion", VERSION);
             xml.tag("programRevision", revision);
+            }
+      else {
+            xml.stag("museScore version=\"2.00\"");
             }
       write(xml, onlySelection);
       xml.etag();
@@ -892,11 +958,8 @@ bool Score::read(XmlReader& e)
             const QStringRef& tag(e.name());
             if (tag == "Staff")
                   readStaff(e);
-            else if (tag == "KeySig") {
-                  KeySig* ks = new KeySig(this);
-                  ks->read(e);
-                  customKeysigs.append(ks);
-                  }
+            else if (tag == "KeySig")           // obsolete
+                  e.skipCurrentElement();
             else if (tag == "StaffType") {      // obsolete
 #if 0
                   int idx           = e.intAttribute("idx");
@@ -1083,6 +1146,13 @@ bool Score::read(XmlReader& e)
                   }
             else if (tag == "cursorTrack")
                   e.skipCurrentElement();
+            else if (tag == "layoutMode") {
+                  QString s = e.readElementText();
+                  if (s == "line")
+                        _layoutMode = LayoutMode::LINE;
+                  else
+                        qDebug("layoutMode: %s", qPrintable(s));
+                  }
             else
                   e.unknown();
             }
@@ -1174,7 +1244,11 @@ void Score::print(QPainter* painter, int pageNo)
 
 QByteArray Score::readCompressedToBuffer()
       {
-      MQZipReader uz(filePath());
+      MQZipReader uz(info.filePath());
+      if (!uz.exists()) {
+            qDebug("Score::readCompressedToBuffer: cannot read zip file");
+            return QByteArray();
+            }
       QList<QString> images;
       QString rootfile = readRootFile(&uz, images);
 
@@ -1187,7 +1261,7 @@ QByteArray Score::readCompressedToBuffer()
             }
 
       if (rootfile.isEmpty()) {
-            qDebug("=can't find rootfile in: %s", qPrintable(filePath()));
+            qDebug("=can't find rootfile in: %s", qPrintable(info.filePath()));
             return QByteArray();
             }
       return uz.fileData(rootfile);
@@ -1206,7 +1280,7 @@ QByteArray Score::readToBuffer()
             ba = readCompressedToBuffer();
             }
       if (cs.toLower() == "msc" || cs.toLower() == "mscx") {
-            QFile f(filePath());
+            QFile f(info.filePath());
             if (f.open(QIODevice::ReadOnly)) {
                   ba = f.readAll();
                   f.close();

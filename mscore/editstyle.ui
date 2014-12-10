@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1004</width>
-    <height>762</height>
+    <width>904</width>
+    <height>577</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -978,7 +978,7 @@
           </sizepolicy>
          </property>
          <property name="title">
-          <string>Header text</string>
+          <string>Header Text</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -995,7 +995,7 @@
             <item>
              <widget class="QCheckBox" name="showHeaderFirstPage">
               <property name="toolTip">
-               <string>show header also on first page</string>
+               <string>Show header also on first page</string>
               </property>
               <property name="text">
                <string>Show first</string>
@@ -1005,7 +1005,7 @@
             <item>
              <widget class="QCheckBox" name="headerOddEven">
               <property name="toolTip">
-               <string>use odd even page header</string>
+               <string>Use odd/even page header</string>
               </property>
               <property name="text">
                <string>Odd/Even</string>
@@ -1039,7 +1039,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="3">
+            <item row="0" column="2">
              <widget class="QLabel" name="labelMiddleHeader">
               <property name="text">
                <string>Middle</string>
@@ -1049,7 +1049,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="5">
+            <item row="0" column="3">
              <widget class="QLabel" name="labelRightHeader">
               <property name="text">
                <string>Right</string>
@@ -1060,14 +1060,14 @@
              </widget>
             </item>
             <item row="1" column="0">
-             <widget class="QLabel" name="labelEvenHeader">
+             <widget class="QLabel" name="labelOddHeader">
               <property name="text">
-               <string>Even</string>
+               <string>Odd</string>
               </property>
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QTextEdit" name="evenHeaderL">
+             <widget class="QTextEdit" name="oddHeaderL">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -1089,17 +1089,29 @@
              </widget>
             </item>
             <item row="1" column="2">
-             <widget class="QToolButton" name="editEvenHeaderL">
-              <property name="toolTip">
-               <string>edit even page header</string>
+             <widget class="QTextEdit" name="oddHeaderC">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
               </property>
-              <property name="text">
-               <string>...</string>
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
               </property>
              </widget>
             </item>
             <item row="1" column="3">
-             <widget class="QTextEdit" name="evenHeaderC">
+             <widget class="QTextEdit" name="oddHeaderR">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -1117,60 +1129,11 @@
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="4">
-             <widget class="QToolButton" name="editEvenHeaderC">
-              <property name="toolTip">
-               <string>edit even page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="5">
-             <widget class="QTextEdit" name="evenHeaderR">
-              <property name="sizePolicy">
-               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                <horstretch>0</horstretch>
-                <verstretch>0</verstretch>
-               </sizepolicy>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="6">
-             <widget class="QToolButton" name="editEvenHeaderR">
-              <property name="toolTip">
-               <string>edit even page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="labelOddHeader">
-              <property name="text">
-               <string>Odd</string>
               </property>
              </widget>
             </item>
             <item row="2" column="1">
-             <widget class="QTextEdit" name="oddHeaderL">
+             <widget class="QTextEdit" name="evenHeaderL">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1182,21 +1145,34 @@
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="labelEvenHeader">
+              <property name="text">
+               <string>Even</string>
               </property>
              </widget>
             </item>
             <item row="2" column="2">
-             <widget class="QToolButton" name="editOddHeaderL">
-              <property name="toolTip">
-               <string>add odd page header</string>
+             <widget class="QTextEdit" name="evenHeaderC">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
               </property>
-              <property name="text">
-               <string>...</string>
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>16777215</height>
+               </size>
               </property>
              </widget>
             </item>
             <item row="2" column="3">
-             <widget class="QTextEdit" name="oddHeaderC">
+             <widget class="QTextEdit" name="evenHeaderR">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1208,42 +1184,6 @@
                 <width>16777215</width>
                 <height>16777215</height>
                </size>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="4">
-             <widget class="QToolButton" name="editOddHeaderC">
-              <property name="toolTip">
-               <string>add odd page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="5">
-             <widget class="QTextEdit" name="oddHeaderR">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>16777215</width>
-                <height>16777215</height>
-               </size>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="6">
-             <widget class="QToolButton" name="editOddHeaderR">
-              <property name="toolTip">
-               <string>add odd page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
               </property>
              </widget>
             </item>
@@ -1268,7 +1208,7 @@
           </sizepolicy>
          </property>
          <property name="title">
-          <string>Footer text</string>
+          <string>Footer Text</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -1285,7 +1225,7 @@
             <item>
              <widget class="QCheckBox" name="showFooterFirstPage">
               <property name="toolTip">
-               <string>show footer also on first page</string>
+               <string>Show footer also on first page</string>
               </property>
               <property name="text">
                <string>Show first</string>
@@ -1295,7 +1235,7 @@
             <item>
              <widget class="QCheckBox" name="footerOddEven">
               <property name="toolTip">
-               <string>use odd even page footer</string>
+               <string>Use odd/even page footer</string>
               </property>
               <property name="text">
                <string>Odd/Even</string>
@@ -1319,25 +1259,15 @@
           </item>
           <item>
            <layout class="QGridLayout" name="gridLayout_6">
-            <item row="2" column="4">
-             <widget class="QToolButton" name="editOddFooterC">
-              <property name="toolTip">
-               <string>edit odd page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="0">
-             <widget class="QLabel" name="labelEvenFooter">
+             <widget class="QLabel" name="labelOddFooter">
               <property name="text">
-               <string>Even</string>
+               <string>Odd</string>
               </property>
              </widget>
             </item>
             <item row="1" column="1">
-             <widget class="QTextEdit" name="evenFooterL">
+             <widget class="QTextEdit" name="oddFooterL">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1346,7 +1276,7 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="3">
+            <item row="0" column="2">
              <widget class="QLabel" name="labelMiddleFooter">
               <property name="text">
                <string>Middle</string>
@@ -1356,38 +1286,18 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="6">
-             <widget class="QToolButton" name="editEvenFooterR">
-              <property name="toolTip">
-               <string>edit even page footer</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="6">
-             <widget class="QToolButton" name="editOddFooterR">
-              <property name="toolTip">
-               <string>edit odd page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
             <item row="1" column="2">
-             <widget class="QToolButton" name="editEvenFooterL">
-              <property name="toolTip">
-               <string>edit even page footer</string>
-              </property>
-              <property name="text">
-               <string>...</string>
+             <widget class="QTextEdit" name="oddFooterC">
+              <property name="minimumSize">
+               <size>
+                <width>0</width>
+                <height>30</height>
+               </size>
               </property>
              </widget>
             </item>
-            <item row="1" column="3">
-             <widget class="QTextEdit" name="evenFooterC">
+            <item row="2" column="1">
+             <widget class="QTextEdit" name="evenFooterL">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1397,19 +1307,9 @@
              </widget>
             </item>
             <item row="2" column="0">
-             <widget class="QLabel" name="labelOddFooter">
+             <widget class="QLabel" name="labelEvenFooter">
               <property name="text">
-               <string>Odd</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="1">
-             <widget class="QTextEdit" name="oddFooterL">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>30</height>
-               </size>
+               <string>Even</string>
               </property>
              </widget>
             </item>
@@ -1429,28 +1329,8 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="4">
-             <widget class="QToolButton" name="editEvenFooterC">
-              <property name="toolTip">
-               <string>edit even page footer</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
             <item row="2" column="2">
-             <widget class="QToolButton" name="editOddFooterL">
-              <property name="toolTip">
-               <string>edit odd page header</string>
-              </property>
-              <property name="text">
-               <string>...</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="3">
-             <widget class="QTextEdit" name="oddFooterC">
+             <widget class="QTextEdit" name="evenFooterC">
               <property name="minimumSize">
                <size>
                 <width>0</width>
@@ -1459,7 +1339,7 @@
               </property>
              </widget>
             </item>
-            <item row="1" column="5">
+            <item row="2" column="3">
              <widget class="QTextEdit" name="evenFooterR">
               <property name="minimumSize">
                <size>
@@ -1469,7 +1349,7 @@
               </property>
              </widget>
             </item>
-            <item row="2" column="5">
+            <item row="1" column="3">
              <widget class="QTextEdit" name="oddFooterR">
               <property name="minimumSize">
                <size>
@@ -1479,20 +1359,20 @@
               </property>
              </widget>
             </item>
-            <item row="0" column="5">
+            <item row="0" column="0">
+             <widget class="QLabel" name="labelPageFooter">
+              <property name="text">
+               <string>Page</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="3">
              <widget class="QLabel" name="labelRightFooter">
               <property name="text">
                <string>Right</string>
               </property>
               <property name="alignment">
                <set>Qt::AlignCenter</set>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="labelPageFooter">
-              <property name="text">
-               <string>Page</string>
               </property>
              </widget>
             </item>
@@ -1504,7 +1384,7 @@
        <item row="3" column="0">
         <widget class="QGroupBox" name="showMeasureNumber">
          <property name="title">
-          <string>Measure numbers</string>
+          <string>Measure Numbers</string>
          </property>
          <property name="flat">
           <bool>false</bool>
@@ -1636,7 +1516,7 @@
             <item row="4" column="0">
              <widget class="QLabel" name="label_29">
               <property name="text">
-               <string>Fix number of measures/system:</string>
+               <string>Fixed number of measures/system:</string>
               </property>
               <property name="buddy">
                <cstring>fixNumberMeasures</cstring>
@@ -1649,7 +1529,7 @@
             <item row="5" column="0">
              <widget class="QCheckBox" name="fixMeasureWidth">
               <property name="text">
-               <string>Fix measure width</string>
+               <string>Fixed measure width</string>
               </property>
              </widget>
             </item>
@@ -1675,7 +1555,7 @@
             <item row="0" column="0">
              <widget class="QLabel" name="label_91">
               <property name="text">
-               <string>System bracket width:</string>
+               <string>System bracket thickness:</string>
               </property>
               <property name="buddy">
                <cstring>bracketWidth</cstring>
@@ -1685,7 +1565,7 @@
             <item row="2" column="0">
              <widget class="QLabel" name="label_92">
               <property name="text">
-               <string>Brace width:</string>
+               <string>Brace thickness:</string>
               </property>
               <property name="buddy">
                <cstring>akkoladeWidth</cstring>
@@ -2829,7 +2709,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_18">
             <property name="title">
-             <string>Default TAB clef</string>
+             <string>Default TAB Clef</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_29">
              <item>
@@ -3491,7 +3371,7 @@
           <item row="3" column="0">
            <widget class="QLabel" name="label_10">
             <property name="text">
-             <string>Line break height:</string>
+             <string>Continue height:</string>
             </property>
             <property name="buddy">
              <cstring>hairpinContinueHeight</cstring>
@@ -3556,20 +3436,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3582,20 +3452,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3608,20 +3468,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3634,20 +3484,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3743,27 +3583,27 @@
            <widget class="QComboBox" name="voltaLineStyle">
             <item>
              <property name="text">
-              <string>Solid</string>
+              <string>Continuous</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dash</string>
+              <string>Dashed</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dot</string>
+              <string>Dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDot</string>
+              <string>Dash-dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDotDot</string>
+              <string>Dash-dot-dotted</string>
              </property>
             </item>
            </widget>
@@ -3797,20 +3637,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3823,20 +3653,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3849,20 +3669,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3875,20 +3685,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3919,20 +3719,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -3987,27 +3777,27 @@
            <widget class="QComboBox" name="ottavaLineStyle">
             <item>
              <property name="text">
-              <string>Solid</string>
+              <string>Continuous</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dash</string>
+              <string>Dashed</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dot</string>
+              <string>Dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDot</string>
+              <string>Dash-dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDotDot</string>
+              <string>Dash-dot-dotted</string>
              </property>
             </item>
            </widget>
@@ -4054,20 +3844,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -4080,20 +3860,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -4106,27 +3876,17 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
           <item row="0" column="4">
            <widget class="QCheckBox" name="ottavaNumbersOnly">
             <property name="text">
-             <string>numbers only</string>
+             <string>Numbers only</string>
             </property>
            </widget>
           </item>
@@ -4152,20 +3912,10 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>reset value</string>
+             <string>Reset value</string>
             </property>
             <property name="text">
              <string>...</string>
-            </property>
-            <property name="icon">
-             <iconset resource="musescore.qrc">
-              <normaloff>:/data/icons/resetproperty.png</normaloff>:/data/icons/resetproperty.png</iconset>
-            </property>
-            <property name="iconSize">
-             <size>
-              <width>14</width>
-              <height>10</height>
-             </size>
             </property>
            </widget>
           </item>
@@ -4219,27 +3969,27 @@
            <widget class="QComboBox" name="pedalLineStyle">
             <item>
              <property name="text">
-              <string>Solid</string>
+              <string>Continuous</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dash</string>
+              <string>Dashed</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>Dot</string>
+              <string>Dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDot</string>
+              <string>Dash-dotted</string>
              </property>
             </item>
             <item>
              <property name="text">
-              <string>DashDotDot</string>
+              <string>Dash-dot-dotted</string>
              </property>
             </item>
            </widget>
@@ -4458,7 +4208,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_23">
             <property name="title">
-             <string>Root / bass spelling</string>
+             <string>Root / Bass Spelling</string>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_37">
              <item>
@@ -4476,7 +4226,7 @@
                <item>
                 <widget class="QRadioButton" name="useGermanNoteNames">
                  <property name="toolTip">
-                  <string>A, B, H, C, Cis, ...</string>
+                  <string>A, B♭, H, C, C♯, ...</string>
                  </property>
                  <property name="text">
                   <string>German</string>
@@ -4484,12 +4234,32 @@
                 </widget>
                </item>
                <item>
+                <widget class="QRadioButton" name="useFullGermanNoteNames">
+                 <property name="toolTip">
+                  <string>A, B, H, C, Cis</string>
+                 </property>
+                 <property name="text">
+                  <string>Full German</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
                 <widget class="QRadioButton" name="useSolfeggioNoteNames">
                  <property name="toolTip">
-                  <string>La, Si♭, Si, Do, Do♯, ...</string>
+                  <string>Do, Do♯, Re♭, Re, ...</string>
                  </property>
                  <property name="text">
                   <string>Solfeggio</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QRadioButton" name="useFrenchNoteNames">
+                 <property name="toolTip">
+                  <string>Do, Do♯, Ré♭, Ré, ...</string>
+                 </property>
+                 <property name="text">
+                  <string>French</string>
                  </property>
                 </widget>
                </item>
@@ -4509,11 +4279,42 @@
               </layout>
              </item>
              <item>
-              <widget class="QCheckBox" name="lowerCaseMinorChords">
-               <property name="text">
-                <string>Lower case minor chords</string>
-               </property>
-              </widget>
+              <layout class="QHBoxLayout" name="horizontalLayout_3">
+               <item>
+                <widget class="QCheckBox" name="lowerCaseMinorChords">
+                 <property name="text">
+                  <string>Lower case minor chords</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="lowerCaseBassNotes">
+                 <property name="text">
+                  <string>Lower case bass notes</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QCheckBox" name="allCapsNoteNames">
+                 <property name="text">
+                  <string>All caps note names</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_17">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+              </layout>
              </item>
             </layout>
            </widget>
@@ -5281,27 +5082,27 @@
        <item>
         <widget class="QGroupBox" name="keySigNaturalsGroup">
          <property name="title">
-          <string>Naturals in key signatures</string>
+          <string>Naturals in Key Signatures</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_35">
           <item>
            <widget class="QRadioButton" name="radioKeySigNatNone">
             <property name="text">
-             <string>Only for change to C Maj / A min</string>
+             <string>Only for a change to C Maj / A min</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QRadioButton" name="radioKeySigNatBefore">
             <property name="text">
-             <string>Before change to less sharps / flats</string>
+             <string>Before key signature if changing to fewer sharps or flats</string>
             </property>
            </widget>
           </item>
           <item>
            <widget class="QRadioButton" name="radioKeySigNatAfter">
             <property name="text">
-             <string>After change to less sharps / flats (but before change sharps &lt;=&gt; flats)</string>
+             <string>After key signature if changing to fewer sharps or flats. Before if changing between sharps and flats</string>
             </property>
            </widget>
           </item>
@@ -5337,7 +5138,7 @@
           <item>
            <widget class="QGroupBox" name="verticalDistance">
             <property name="title">
-             <string>Vertical distance from the notes</string>
+             <string>Vertical Distance from the Notes</string>
             </property>
             <layout class="QFormLayout" name="formLayout_5">
              <item row="0" column="0">
@@ -5440,7 +5241,7 @@
           <item>
            <widget class="QGroupBox" name="groupBox_26">
             <property name="title">
-             <string>Horizontal distance from the notes</string>
+             <string>Horizontal Distance from the Notes</string>
             </property>
             <layout class="QFormLayout" name="formLayout_8">
              <item row="0" column="0">
@@ -5736,6 +5537,7 @@
  <tabstops>
   <tabstop>pageList</tabstop>
   <tabstop>musicalSymbolFont</tabstop>
+  <tabstop>musicalTextFont</tabstop>
   <tabstop>concertPitch</tabstop>
   <tabstop>multiMeasureRests</tabstop>
   <tabstop>minEmptyMeasures</tabstop>
@@ -5744,6 +5546,10 @@
   <tabstop>dontHideStavesInFirstSystem</tabstop>
   <tabstop>crossMeasureValues</tabstop>
   <tabstop>hideInstrumentNameIfOneInstrument</tabstop>
+  <tabstop>SwingOff</tabstop>
+  <tabstop>swingEighth</tabstop>
+  <tabstop>swingSixteenth</tabstop>
+  <tabstop>swingBox</tabstop>
   <tabstop>staffUpperBorder</tabstop>
   <tabstop>staffLowerBorder</tabstop>
   <tabstop>staffDistance</tabstop>
@@ -5765,33 +5571,21 @@
   <tabstop>showHeader</tabstop>
   <tabstop>showHeaderFirstPage</tabstop>
   <tabstop>headerOddEven</tabstop>
-  <tabstop>evenHeaderL</tabstop>
-  <tabstop>editEvenHeaderL</tabstop>
-  <tabstop>evenHeaderC</tabstop>
-  <tabstop>editEvenHeaderC</tabstop>
-  <tabstop>evenHeaderR</tabstop>
-  <tabstop>editEvenHeaderR</tabstop>
   <tabstop>oddHeaderL</tabstop>
-  <tabstop>editOddHeaderL</tabstop>
   <tabstop>oddHeaderC</tabstop>
-  <tabstop>editOddHeaderC</tabstop>
   <tabstop>oddHeaderR</tabstop>
-  <tabstop>editOddHeaderR</tabstop>
+  <tabstop>evenHeaderL</tabstop>
+  <tabstop>evenHeaderC</tabstop>
+  <tabstop>evenHeaderR</tabstop>
   <tabstop>showFooter</tabstop>
   <tabstop>showFooterFirstPage</tabstop>
   <tabstop>footerOddEven</tabstop>
-  <tabstop>evenFooterL</tabstop>
-  <tabstop>editEvenFooterL</tabstop>
-  <tabstop>evenFooterC</tabstop>
-  <tabstop>editEvenFooterC</tabstop>
-  <tabstop>evenFooterR</tabstop>
-  <tabstop>editEvenFooterR</tabstop>
   <tabstop>oddFooterL</tabstop>
-  <tabstop>editOddFooterL</tabstop>
   <tabstop>oddFooterC</tabstop>
-  <tabstop>editOddFooterC</tabstop>
   <tabstop>oddFooterR</tabstop>
-  <tabstop>editOddFooterR</tabstop>
+  <tabstop>evenFooterL</tabstop>
+  <tabstop>evenFooterC</tabstop>
+  <tabstop>evenFooterR</tabstop>
   <tabstop>showMeasureNumber</tabstop>
   <tabstop>showFirstMeasureNumber</tabstop>
   <tabstop>showAllStaffsMeasureNumber</tabstop>
@@ -5891,8 +5685,12 @@
   <tabstop>chordsXmlFile</tabstop>
   <tabstop>useStandardNoteNames</tabstop>
   <tabstop>useGermanNoteNames</tabstop>
+  <tabstop>useFullGermanNoteNames</tabstop>
   <tabstop>useSolfeggioNoteNames</tabstop>
+  <tabstop>useFrenchNoteNames</tabstop>
   <tabstop>lowerCaseMinorChords</tabstop>
+  <tabstop>lowerCaseBassNotes</tabstop>
+  <tabstop>allCapsNoteNames</tabstop>
   <tabstop>harmonyY</tabstop>
   <tabstop>harmonyFretDist</tabstop>
   <tabstop>minHarmonyDistance</tabstop>
@@ -5927,11 +5725,8 @@
   <tabstop>tupletNoteLeftDistance</tabstop>
   <tabstop>tupletStemRightDistance</tabstop>
   <tabstop>tupletNoteRightDistance</tabstop>
-  <tabstop>buttonBox</tabstop>
  </tabstops>
- <resources>
-  <include location="musescore.qrc"/>
- </resources>
+ <resources/>
  <connections>
   <connection>
    <sender>pageList</sender>

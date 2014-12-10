@@ -31,31 +31,16 @@ Lyrics::Lyrics(Score* s)
       _no          = 0;
       _ticks       = 0;
       _syllabic    = Syllabic::SINGLE;
-      _verseNumber = 0;
       }
 
 Lyrics::Lyrics(const Lyrics& l)
    : Text(l)
       {
-      _no  = l._no;
-      _ticks = l._ticks;
+      _no       = l._no;
+      _ticks    = l._ticks;
       _syllabic = l._syllabic;
-      if (l._verseNumber)
-            _verseNumber = new Text(*l._verseNumber);
-      else
-            _verseNumber = 0;
-      QList<Line*> _separator;
-      foreach(Line* l, l._separator)
-            _separator.append(new Line(*l));
-      }
-
-//---------------------------------------------------------
-//   Lyrics
-//---------------------------------------------------------
-
-Lyrics::~Lyrics()
-      {
-      delete _verseNumber;
+      for (const Line* line : l._separator)
+            _separator.append(new Line(*line));
       }
 
 //---------------------------------------------------------
@@ -64,8 +49,6 @@ Lyrics::~Lyrics()
 
 void Lyrics::scanElements(void* data, void (*func)(void*, Element*), bool)
       {
-      if (_verseNumber)
-            func(data, _verseNumber);
       func(data, this);
       }
 
@@ -89,11 +72,6 @@ void Lyrics::write(Xml& xml) const
       writeProperty(xml, P_ID::LYRIC_TICKS);
 
       Text::writeProperties(xml);
-      if (_verseNumber) {
-            xml.stag("Number");
-            _verseNumber->writeProperties(xml);
-            xml.etag();
-            }
       xml.etag();
       }
 
@@ -104,6 +82,7 @@ void Lyrics::write(Xml& xml) const
 void Lyrics::read(XmlReader& e)
       {
       int   iEndTick = 0;           // used for backward compatibility
+      Text* _verseNumber = 0;
 
       while (e.readNextStartElement()) {
             const QStringRef& tag(e.name());
@@ -129,8 +108,8 @@ void Lyrics::read(XmlReader& e)
                   }
             else if (tag == "ticks")
                   _ticks = e.readInt();
-            else if (tag == "Number") {
-                  _verseNumber = new Text(score());
+            else if (tag == "Number") {                           // obsolete
+                  Text* _verseNumber = new Text(score());
                   _verseNumber->read(e);
                   _verseNumber->setParent(this);
                   }
@@ -142,6 +121,11 @@ void Lyrics::read(XmlReader& e)
             _ticks = iEndTick - e.tick();
             // qDebug("Lyrics::endTick: %d  ticks %d", iEndTick, _ticks);
             }
+      if (_verseNumber) {
+            // TODO: add text to main text
+            }
+
+      delete _verseNumber;
       }
 
 //---------------------------------------------------------
@@ -153,8 +137,6 @@ void Lyrics::add(Element* el)
       el->setParent(this);
       if (el->type() == Element::Type::LINE)
             _separator.append((Line*)el);
-      else if (el->type() == Element::Type::TEXT)
-            _verseNumber = static_cast<Text*>(el);
       else
             qDebug("Lyrics::add: unknown element %s", el->name());
       }
@@ -167,8 +149,6 @@ void Lyrics::remove(Element* el)
       {
       if (el->type() == Element::Type::LINE)
             _separator.removeAll((Line*)el);
-      else if (el == _verseNumber)
-            _verseNumber = 0;
       else
             qDebug("Lyrics::remove: unknown element %s", el->name());
       }
@@ -207,6 +187,26 @@ void Lyrics::layout()
             }
       }
 
+bool Lyrics::isMelisma() const
+      {
+      // entered as melisma using underscore?
+      if (_ticks > 0)
+            return true;
+
+      // hyphenated?
+      if (_syllabic == Syllabic::BEGIN || _syllabic == Syllabic::MIDDLE) {
+            // find next CR on same track and check for existence of lyric in same verse
+            ChordRest* cr = chordRest();
+            Segment* s = cr->segment()->next1();
+            ChordRest* ncr = s ? s->nextChordRest(cr->track()) : nullptr;
+            if (ncr && !ncr->lyrics(_no))
+                  return true;
+            }
+
+      // default - not a melisma
+      return false;
+      }
+
 //---------------------------------------------------------
 //   layout1
 //---------------------------------------------------------
@@ -226,34 +226,55 @@ void Lyrics::layout1()
       qreal x  = 0.0;
 
       //
-      // left align if syllable has a number or is a melisma or is first syllable of hyphenated word
+      // parse leading verse number and/or punctuation, so we can factor it into layout separately
+      // TODO: provide a way to disable this
       //
-      ChordRest* cr = chordRest();
-      qreal maxWidth;
-      if (cr->type() == Element::Type::CHORD)
-            maxWidth = static_cast<Chord*>(cr)->maxHeadWidth();
-      else
-            maxWidth = cr->width();       // TODO: exclude ledger line for multivoice rest?
-      qreal nominalWidth = symWidth(SymId::noteheadBlack);
-      bool hyphenatedMelisma = false;
-      if (_syllabic == Syllabic::BEGIN || _syllabic == Syllabic::MIDDLE) {
-            // hyphenated syllables representing melismas need to be left aligned
-            // detecting this means finding next CR on same track and checking for existence of lyric in same verse
-            Segment* s = cr->segment()->next1();
-            ChordRest* ncr = s ? s->nextChordRest(cr->track()) : nullptr;
-            if (ncr && !ncr->lyrics(_no))
-                  hyphenatedMelisma = true;
+      bool hasNumber = false; // _verseNumber;
+      qreal adjust = 0.0;
+      QString s = plainText(true);
+      // find:
+      // 1) string of numbers and non-word characters at start of syllable
+      // 2) at least one other character (indicating start of actual lyric)
+      QRegularExpression leadingPattern("(^[\\d\\W]+)([^\\d\\W]+)");
+      QRegularExpressionMatch leadingMatch = leadingPattern.match(s);
+      if (leadingMatch.hasMatch()) {
+            // leading string
+            QString s1 = leadingMatch.captured(1);
+            // actual lyric
+            //QString s2 = leadingMatch.captured(2);
+            Text leading(*this);
+            leading.setPlainText(s1);
+            leading.layout1();
+            adjust = leading.width();
+            if (!s1.isEmpty() && s1[0].isDigit())
+                  hasNumber = true;
             }
-      if (_ticks == 0 && !hyphenatedMelisma && (textStyle().align() & AlignmentFlags::HCENTER) && !_verseNumber)
-            x +=  nominalWidth * .5 - cr->x();
-      else if (_ticks || hyphenatedMelisma || ((textStyle().align() & AlignmentFlags::HCENTER) && _verseNumber))
-            x += (width() + nominalWidth - maxWidth) * .5 - cr->x();
+
+      if (textStyle().align() & AlignmentFlags::HCENTER) {
+            //
+            // center under notehead, not origin
+            // however, lyrics that are melismas or have verse numbers will be forced to left alignment
+            // TODO: provide a way to disable the automatic left alignment
+            //
+            ChordRest* cr = chordRest();
+            qreal maxWidth;
+            if (cr->type() == Element::Type::CHORD)
+                  maxWidth = static_cast<Chord*>(cr)->maxHeadWidth();
+            else
+                  maxWidth = cr->width();       // TODO: exclude ledger line for multivoice rest?
+            qreal nominalWidth = symWidth(SymId::noteheadBlack);
+            if (!isMelisma() && !hasNumber)     // center under notehead
+                  x +=  nominalWidth * .5 - cr->x() - adjust * 0.5;
+            else                                // force left alignment
+                  x += (width() + nominalWidth - maxWidth) * .5 - cr->x() - adjust;
+            }
+      else {
+            // even for left aligned syllables, ignore leading verse numbers and/or punctuation
+            x -= adjust;
+            }
+
       rxpos() += x;
       rypos() += y;
-      if (_verseNumber) {
-            _verseNumber->layout();
-            _verseNumber->setPos(-x, 0.0);
-            }
       }
 
 //---------------------------------------------------------
@@ -318,7 +339,7 @@ int Lyrics::endTick() const
 
 bool Lyrics::acceptDrop(const DropData& data) const
       {
-      return data.element->type() == Element::Type::TEXT;
+      return data.element->type() == Element::Type::TEXT || Text::acceptDrop(data);
       }
 
 //---------------------------------------------------------
@@ -327,8 +348,13 @@ bool Lyrics::acceptDrop(const DropData& data) const
 
 Element* Lyrics::drop(const DropData& data)
       {
+      Element::Type type = data.element->type();
+      if (type == Element::Type::SYMBOL || type == Element::Type::FSYMBOL) {
+            Text::drop(data);
+            return 0;
+            }
       Text* e = static_cast<Text*>(data.element);
-      if (!(e->type() == Element::Type::TEXT && e->textStyle().name() == "Lyrics Verse")) {
+      if (!(type == Element::Type::TEXT && e->textStyle().name() == "Lyrics Verse Number")) {
             delete e;
             return 0;
             }

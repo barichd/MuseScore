@@ -23,7 +23,7 @@
 
 #include "globals.h"
 #include "shortcut.h"
-#include "mscore/importmidi_operations.h"
+#include "mscore/importmidi/importmidi_operations.h"
 
 namespace Ms {
 
@@ -101,7 +101,6 @@ struct Preferences {
       bool useJackMidi;
       bool useJackTransport;
       bool jackTimebaseMaster;
-      int midiPorts;
       bool rememberLastConnections;
 
       QString alsaDevice;
@@ -116,6 +115,7 @@ struct Preferences {
       QString startScore;
       QString defaultStyleFile;
       bool showSplashScreen;
+      bool showStartcenter;
 
       bool useMidiRemote;
       MidiRemote midiRemote[MIDI_REMOTES];

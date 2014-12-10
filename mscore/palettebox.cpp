@@ -16,7 +16,6 @@
 #include "musescore.h"
 #include "preferences.h"
 #include "libmscore/xml.h"
-#include "paletteBoxButton.h"
 #include "workspace.h"
 
 namespace Ms {
@@ -31,6 +30,24 @@ PaletteBox::PaletteBox(QWidget* parent)
       setObjectName("palette-box");
       setAllowedAreas(Qt::DockWidgetAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea));
 
+      QWidget* w = new QWidget(this);
+      QVBoxLayout* vl = new QVBoxLayout(w);
+      QHBoxLayout* hl = new QHBoxLayout;
+      hl->setContentsMargins(5,5,5,0);
+
+      workspaceList = new QComboBox;
+      workspaceList->setToolTip(tr("Select workspace"));
+      updateWorkspaces();
+      hl->addWidget(workspaceList);
+      QToolButton* nb = new QToolButton;
+      
+      nb->setMinimumHeight(27);
+      nb->setText(tr("+"));
+      nb->setToolTip(tr("Add new workspace"));
+      hl->addWidget(nb);
+
+      setWidget(w);
+
       PaletteBoxScrollArea* sa = new PaletteBoxScrollArea;
       sa->setFocusPolicy(Qt::NoFocus);
       sa->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
@@ -39,7 +56,9 @@ PaletteBox::PaletteBox(QWidget* parent)
       sa->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
       sa->setWidgetResizable(true);
       sa->setFrameShape(QFrame::NoFrame);
-      setWidget(sa);
+      vl->addWidget(sa);
+      vl->addLayout(hl);
+      // setWidget(sa);
 
       QWidget* paletteList = new QWidget;
       sa->setWidget(paletteList);
@@ -49,6 +68,51 @@ PaletteBox::PaletteBox(QWidget* parent)
       vbox->setSpacing(1);
       vbox->addStretch();
       paletteList->show();
+
+      connect(nb, SIGNAL(clicked()), SLOT(newWorkspaceClicked()));
+      connect(workspaceList, SIGNAL(activated(int)), SLOT(workspaceSelected(int)));
+      }
+
+//---------------------------------------------------------
+//   workspaceSelected
+//---------------------------------------------------------
+
+void PaletteBox::workspaceSelected(int idx)
+      {
+      Workspace* w = Workspace::workspaces().at(idx);
+      preferences.workspace = w->name();
+      preferences.dirty = true;
+      mscore->changeWorkspace(w);
+      }
+
+//---------------------------------------------------------
+//   newWorkspaceClicked
+//---------------------------------------------------------
+
+void PaletteBox::newWorkspaceClicked()
+      {
+      mscore->createNewWorkspace();
+      updateWorkspaces();
+      }
+
+//---------------------------------------------------------
+//   updateWorkspaces
+//---------------------------------------------------------
+
+void PaletteBox::updateWorkspaces()
+      {
+      workspaceList->clear();
+      const QList<Workspace*> pl = Workspace::workspaces();
+      int idx = 0;
+      int curIdx = -1;
+      foreach (Workspace* p, pl) {
+            workspaceList->addItem(qApp->translate("Ms::Workspace", p->name().toUtf8()), p->path());
+            if (p->name() == preferences.workspace)
+                  curIdx = idx;
+            ++idx;
+            }
+      if (curIdx != -1)
+            workspaceList->setCurrentIndex(curIdx);
       }
 
 //---------------------------------------------------------

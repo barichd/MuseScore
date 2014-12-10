@@ -118,9 +118,13 @@ class BarLine : public Element {
       static QString userTypeName2(BarLineType);
 
       QString barLineTypeName() const;
+      static QString barLineTypeName(BarLineType t);
       void setBarLineType(const QString& s);
       void setBarLineType(BarLineType i) { _barLineType = i;     updateCustomType();      }
       BarLineType barLineType() const    { return _barLineType;  }
+
+      virtual int subtype() const         { return int(_barLineType); }
+      virtual QString subtypeName() const { return qApp->translate("barline", barLineTypeName().toUtf8()); }
 
       virtual QVariant getProperty(P_ID propertyId) const override;
       virtual bool setProperty(P_ID propertyId, const QVariant&) override;

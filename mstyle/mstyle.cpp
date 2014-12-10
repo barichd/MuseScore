@@ -29,6 +29,7 @@
 #include "transitions.h"
 #include "mconfig.h"
 #include "../mscore/paletteBoxButton.h"
+#include "../mscore/miconengine.h"
 
 #define MgStyleConfigData_toolTipTransparent            true
 #define MgStyleConfigData_toolBarDrawItemSeparator      true
@@ -36,7 +37,7 @@
 #define MgStyleConfigData_viewTriangularExpanderSize    ArrowNormal
 #define MgStyleConfigData_viewDrawTreeBranchLines       true
 #define MgStyleConfigData_checkBoxStyle_CS_CHECK        true
-#define MgStyleConfigData_scrollBarColored              true
+#define MgStyleConfigData_scrollBarColored              false
 #define MgStyleConfigData_scrollBarBevel                false
 
 //---------------------------------------------------------
@@ -153,7 +154,7 @@ int MgStyle::pixelMetric(PixelMetric metric, const QStyleOption* option, const Q
             case PM_LargeIconSize:
                   return 32;              //??
             case PM_MessageBoxIconSize:
-                  return 22;              //??
+                  return 48;              //??
 
             case PM_DefaultFrameWidth: {
                   if ( qobject_cast<const QLineEdit*>(widget) )
@@ -8117,6 +8118,8 @@ int MgStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget
                   return true;
             case SH_Menu_MouseTracking:
                   return true;
+            case SH_MenuBar_AltKeyNavigation:
+                  return true;
 
             case SH_Menu_SubMenuPopupDelay:
                   return 150;
@@ -8143,7 +8146,7 @@ int MgStyle::styleHint(StyleHint hint, const QStyleOption* option, const QWidget
             case SH_FormLayoutWrapPolicy:
                   return QFormLayout::DontWrapRows;
             case SH_MessageBox_TextInteractionFlags:
-                  return true;
+                  return Qt::LinksAccessibleByMouse | Qt::TextSelectableByMouse;
             case SH_WindowFrame_Mask:
                   return false;
 
@@ -8586,10 +8589,10 @@ void MgStyle::configurationChanged()
       }
 
 //---------------------------------------------------------
-//   standardIconImplementation
+//   standardIcon
 //---------------------------------------------------------
 
-QIcon MgStyle::standardIconImplementation(StandardPixmap standardIcon,
+QIcon MgStyle::standardIcon(StandardPixmap standardIcon,
             const QStyleOption* option, const QWidget* widget) const {
       // MDI windows buttons
       // get button color ( unfortunately option and widget might not be set )
@@ -8801,9 +8804,34 @@ QIcon MgStyle::standardIconImplementation(StandardPixmap standardIcon,
 
                   return QIcon( realpm );
                   }
-
+            case SP_MessageBoxCritical:
+                  return getCachedIcon(":/data/icons/dialog-error.svg");
+            case SP_MessageBoxWarning:
+                  return getCachedIcon(":/data/icons/dialog-warning.svg");
+            case SP_MessageBoxInformation:
+                  return getCachedIcon(":/data/icons/dialog-information.svg");
+            case SP_MessageBoxQuestion:
+                  return getCachedIcon(":/data/icons/dialog-question.svg");
             default:
-                  return QIcon();
-                  // return QCommonStyle::standardIconImplementation( standardIcon, option, widget );
+                  // return QIcon();
+                  return QCommonStyle::standardIcon( standardIcon, option, widget );
+            }
+      }
+
+//---------------------------------------------------------
+//   getCachedIcon
+//---------------------------------------------------------
+
+QIcon MgStyle::getCachedIcon(QString key) const
+      {
+      QPixmap * pixmap = nullptr;
+      QPixmapCache::find(key, pixmap);
+      if (pixmap)
+            return QIcon(*pixmap);
+      else {
+            QIcon* icon = new QIcon(new MIconEngine);
+            icon->addFile(key);
+            QPixmapCache::insert(key, icon->pixmap(48));
+            return *icon;
             }
       }

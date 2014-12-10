@@ -14,12 +14,13 @@
 #ifndef __PALETTE_BOX_H__
 #define __PALETTE_BOX_H__
 
+#include "paletteBoxButton.h"
+
 namespace Ms {
 
 class Xml;
 class XmlReader;
 class Palette;
-enum class PaletteCommand : char;
 
 //---------------------------------------------------------
 //   PaletteBox
@@ -30,11 +31,14 @@ class PaletteBox : public QDockWidget {
 
       QVBoxLayout* vbox;
       Palette* newPalette(const QString& name, int slot);
+      QComboBox* workspaceList;
 
    private slots:
       void paletteCmd(PaletteCommand, int);
       void closeAll();
       void displayMore(const QString& paletteName);
+      void workspaceSelected(int idx);
+      void newWorkspaceClicked();
 
    signals:
       void changed();
@@ -46,6 +50,7 @@ class PaletteBox : public QDockWidget {
       bool read(XmlReader&);
       void clear();
       QList<Palette*> palettes() const;
+      void updateWorkspaces();
       };
 
 class PaletteBoxScrollArea : public QScrollArea {

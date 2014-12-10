@@ -15,8 +15,8 @@
 
 using namespace Ms;
 
-SfListDialog::SfListDialog()
-   : QDialog(0)
+SfListDialog::SfListDialog(QWidget* parent)
+   : QDialog(parent)
       {
       setWindowTitle(tr("Soundfont Files"));
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
@@ -95,6 +95,8 @@ void FluidGui::synthesizerChanged()
       QStringList sfonts = fluid()->soundFonts();
       soundFonts->clear();
       soundFonts->addItems(sfonts);
+      updateUpDownButtons();
+      emit sfChanged();
       }
 
 //---------------------------------------------------------
@@ -113,6 +115,7 @@ void FluidGui::soundFontUpClicked()
       soundFonts->clear();
       soundFonts->addItems(sfonts);
       soundFonts->setCurrentRow(row-1);
+      emit sfChanged();
       }
 
 //---------------------------------------------------------
@@ -133,6 +136,7 @@ void FluidGui::soundFontDownClicked()
       soundFonts->clear();
       soundFonts->addItems(sfonts);
       soundFonts->setCurrentRow(row+1);
+      emit sfChanged();
       }
 
 //---------------------------------------------------------
@@ -146,6 +150,8 @@ void FluidGui::soundFontDeleteClicked()
             QString s(soundFonts->item(row)->text());
             fluid()->removeSoundFont(s);
             delete soundFonts->takeItem(row);
+            emit sfChanged();
+            emit valueChanged();
             }
       updateUpDownButtons();
       }
@@ -171,7 +177,7 @@ void FluidGui::soundFontAddClicked()
       {
       QFileInfoList l = FluidS::Fluid::sfFiles();
 
-      SfListDialog ld;
+      SfListDialog ld(this);
       foreach (const QFileInfo& fi, l)
             ld.add(fi.fileName(), fi.absoluteFilePath());
       if (!ld.exec())
@@ -190,14 +196,14 @@ void FluidGui::soundFontAddClicked()
       if (sl.contains(sfPath)) {
             QMessageBox::warning(this,
             tr("MuseScore"),
-            QString(tr("Soundfont %1 already loaded")).arg(sfPath));
+            tr("Soundfont %1 already loaded").arg(sfPath));
             }
       else {
             bool loaded = fluid()->addSoundFont(sfPath);
             if (!loaded) {
                   QMessageBox::warning(this,
                   tr("MuseScore"),
-                  QString(tr("cannot load soundfont %1")).arg(sfPath));
+                  tr("cannot load soundfont %1").arg(sfPath));
                   }
             else {
                   soundFonts->insertItem(0, sfName);

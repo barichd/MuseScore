@@ -24,6 +24,7 @@
 #include "libmscore/score.h"
 #include "libmscore/repeat.h"
 #include "libmscore/undo.h"
+#include "libmscore/range.h"
 
 namespace Ms {
 
@@ -55,6 +56,7 @@ void MeasureProperties::gotoNextMeasure()
             setMeasure(m->nextMeasure());
       nextButton->setEnabled(m->nextMeasure() != 0);
       previousButton->setEnabled(m->prevMeasure() != 0);
+      m->score()->end();
       }
 
 //---------------------------------------------------------
@@ -67,6 +69,7 @@ void MeasureProperties::gotoPreviousMeasure()
             setMeasure(m->prevMeasure());
       nextButton->setEnabled(m->nextMeasure() != 0);
       previousButton->setEnabled(m->prevMeasure() != 0);
+      m->score()->end();
       }
 
 //---------------------------------------------------------
@@ -76,7 +79,10 @@ void MeasureProperties::gotoPreviousMeasure()
 void MeasureProperties::setMeasure(Measure* _m)
       {
       m = _m;
-      setWindowTitle(QString(tr("MuseScore: Measure Properties for Measure %1")).arg(m->no()+1));
+      setWindowTitle(tr("MuseScore: Measure Properties for Measure %1").arg(m->no()+1));
+      m->score()->select(0, SelectType::SINGLE, 0);
+      m->score()->select(m, SelectType::ADD, 0);
+
       actualZ->setValue(m->len().numerator());
       int index = actualN->findText(QString::number(m->len().denominator()));
       if (index == -1)
@@ -214,11 +220,20 @@ void MeasureProperties::apply()
       m->undoChangeProperty(P_ID::NO_OFFSET, measureNumberOffset->value());
       m->undoChangeProperty(P_ID::IRREGULAR, isIrregular());
 
-      if (m->len() != len())
-            m->adjustToLen(len());
-
-      score->select(0, SelectType::SINGLE, 0);
-      score->end();
+      if (m->len() != len()) {
+            ScoreRange range;
+            range.read(m->first(), m->last());
+            if (range.canWrite(len()))
+                  m->adjustToLen(len());
+            else if (!MScore::noGui) {
+                  QMessageBox::warning(0,
+                     QT_TRANSLATE_NOOP("MeasureProperties", "MuseScore"),
+                     QT_TRANSLATE_NOOP("MeasureProperties", "cannot change measure length:\n"
+                     "tuplet would cross measure")
+                     );
+                  }
+            }
+      score->update();
       }
 }
 

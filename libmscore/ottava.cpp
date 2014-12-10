@@ -73,6 +73,8 @@ QVariant OttavaSegment::getProperty(P_ID id) const
       {
       switch (id) {
             case P_ID::OTTAVA_TYPE:
+            case P_ID::PLACEMENT:
+            case P_ID::NUMBERS_ONLY:
                   return ottava()->getProperty(id);
             default:
                   return TextLineSegment::getProperty(id);
@@ -89,6 +91,7 @@ bool OttavaSegment::setProperty(P_ID id, const QVariant& v)
             case P_ID::LINE_WIDTH:
             case P_ID::LINE_STYLE:
             case P_ID::OTTAVA_TYPE:
+            case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
                   return ottava()->setProperty(id, v);
             default:
@@ -124,6 +127,7 @@ PropertyStyle OttavaSegment::propertyStyle(P_ID id) const
             case P_ID::OTTAVA_TYPE:
             case P_ID::LINE_WIDTH:
             case P_ID::LINE_STYLE:
+            case P_ID::PLACEMENT:
             case P_ID::NUMBERS_ONLY:
                   return ottava()->propertyStyle(id);
 
@@ -291,12 +295,12 @@ void Ottava::read(XmlReader& e)
                   setLineStyle(Qt::PenStyle(e.readInt()));
                   lineStyleStyle = PropertyStyle::UNSTYLED;
                   }
-            else if (tag == "beginSymbol") {
+            else if (tag == "beginSymbol") {                      // obsolete
                   beginTextStyle = PropertyStyle::UNSTYLED;
                   QString text(e.readElementText());
                   setBeginText(QString("<sym>%1</sym>").arg(text[0].isNumber() ? Sym::id2name(SymId(text.toInt())) : text));
                   }
-            else if (tag == "continueSymbol") {
+            else if (tag == "continueSymbol") {                   // obsolete
                   continueTextStyle = PropertyStyle::UNSTYLED;
                   QString text(e.readElementText());
                   setContinueText(QString("<sym>%1</sym>").arg(text[0].isNumber() ? Sym::id2name(SymId(text.toInt())) : text));
@@ -304,6 +308,10 @@ void Ottava::read(XmlReader& e)
             else if (!TextLine::readProperties(e))
                   e.unknown();
             }
+      if (beginText() != propertyDefault(P_ID::BEGIN_TEXT))
+            beginTextStyle = PropertyStyle::UNSTYLED;
+      if (continueText() != propertyDefault(P_ID::CONTINUE_TEXT))
+            continueTextStyle = PropertyStyle::UNSTYLED;
       }
 
 //---------------------------------------------------------
@@ -332,6 +340,15 @@ bool Ottava::setProperty(P_ID propertyId, const QVariant& val)
       switch (propertyId) {
             case P_ID::OTTAVA_TYPE:
                   setOttavaType(Type(val.toInt()));
+                  break;
+
+            case P_ID::PLACEMENT:
+                  if (val != getProperty(propertyId)) {
+                        // reverse hooks
+                        setBeginHookHeight(-beginHookHeight());
+                        setEndHookHeight(-endHookHeight());
+                        }
+                  TextLine::setProperty(propertyId, val);
                   break;
 
             case P_ID::LINE_WIDTH:
@@ -454,6 +471,7 @@ PropertyStyle Ottava::propertyStyle(P_ID id) const
       {
       switch (id) {
             case P_ID::OTTAVA_TYPE:
+            case P_ID::PLACEMENT:
                   return PropertyStyle::NOSTYLE;
 
             case P_ID::LINE_WIDTH:
@@ -529,12 +547,10 @@ void Ottava::reset()
             score()->undoChangeProperty(this, P_ID::LINE_STYLE, propertyDefault(P_ID::LINE_STYLE), PropertyStyle::STYLED);
       if (numbersOnlyStyle == PropertyStyle::UNSTYLED)
             score()->undoChangeProperty(this, P_ID::NUMBERS_ONLY, propertyDefault(P_ID::NUMBERS_ONLY), PropertyStyle::STYLED);
-      if (beginTextStyle == PropertyStyle::UNSTYLED) {
-            ; // TODO score()->undoChangeProperty(this, P_ID::BEGIN_SYMBOL, propertyDefault(P_BEGIN_SYMBOL), PropertyStyle::STYLED);
-            }
-      if (continueTextStyle == PropertyStyle::UNSTYLED) {
-            ; // TODO score()->undoChangeProperty(this, P_ID::CONTINUE_SYMBOL, propertyDefault(P_CONTINUE_SYMBOL), PropertyStyle::STYLED);
-            }
+      if (beginTextStyle == PropertyStyle::UNSTYLED)
+            score()->undoChangeProperty(this, P_ID::BEGIN_TEXT, propertyDefault(P_ID::BEGIN_TEXT), PropertyStyle::STYLED);
+      if (continueTextStyle == PropertyStyle::UNSTYLED)
+            score()->undoChangeProperty(this, P_ID::CONTINUE_TEXT, propertyDefault(P_ID::CONTINUE_TEXT), PropertyStyle::STYLED);
 
       setOttavaType(_ottavaType);
 

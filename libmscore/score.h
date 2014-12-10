@@ -263,7 +263,8 @@ class Score : public QObject {
             FILE_NO_ROOTFILE,
             FILE_TOO_OLD,
             FILE_TOO_NEW,
-            FILE_USER_ABORT
+            FILE_USER_ABORT,
+            FILE_IGNORE_ERROR
             };
 
    private:
@@ -313,6 +314,7 @@ class Score : public QObject {
       QFileInfo info;
       bool _created;          ///< file is never saved, has generated name
       QString _tmpName;       ///< auto saved with this name if not empty
+      QString _importedFilePath;    // file from which the score was imported, or empty
 
       // the following variables are reset on startCmd()
       //   modified during cmd processing and used in endCmd() to
@@ -369,7 +371,6 @@ class Score : public QObject {
 
       Selection _selection;
       SelectionFilter _selectionFilter;
-      QList<KeySig*> customKeysigs;
       Omr* _omr;
       Audio* _audio;
       bool _showOmr;
@@ -377,11 +378,12 @@ class Score : public QObject {
 
       qreal _noteHeadWidth;
       QString accInfo;             ///< information used by the screen-reader
+      int _midiPortCount;          // A count of JACK/ALSA midi out ports. Stored in a root score
 
       //------------------
 
-      ChordRest* nextMeasure(ChordRest* element, bool selectBehavior = false);
-      ChordRest* prevMeasure(ChordRest* element);
+      ChordRest* nextMeasure(ChordRest* element, bool selectBehavior = false, bool mmRest = false);
+      ChordRest* prevMeasure(ChordRest* element, bool mmRest = false);
       void cmdSetBeamMode(Beam::Mode);
       void cmdFlip();
       Note* getSelectedNote();
@@ -430,14 +432,15 @@ class Score : public QObject {
       bool rewriteMeasures(Measure* fm, Measure* lm, const Fraction&);
       bool rewriteMeasures(Measure* fm, const Fraction& ns);
       void updateVelo();
+      void swingAdjustParams(Chord*, int&, int&, int, int);
+      bool isSubdivided(ChordRest*, int);
       void addAudioTrack();
       void parseVersion(const QString&);
       QList<Fraction> splitGapToMeasureBoundaries(ChordRest*, Fraction);
       void pasteChordRest(ChordRest* cr, int tick, const Interval&);
       void init();
       void removeGeneratedElements(Measure* mb, Measure* end);
-      qreal cautionaryWidth(Measure* m);
-      void createPlayEvents();
+      qreal cautionaryWidth(Measure* m, bool& hasCourtesy);
 
       void selectSingle(Element* e, int staffIdx);
       void selectAdd(Element* e);
@@ -509,8 +512,6 @@ class Score : public QObject {
       void undoAddCR(ChordRest* element, Measure*, int tick);
       void undoRemoveElement(Element* element);
       void undoChangeElement(Element* oldElement, Element* newElement);
-      void undoChangeVoltaEnding(Volta* volta, const QList<int>& l);
-      void undoChangeVoltaText(Volta* volta, const QString& s);
       void undoChangeChordRestSize(ChordRest* cr, bool small);
       void undoChangeChordNoStem(Chord* cr, bool noStem);
       void undoChangePitch(Note* note, int pitch, int tpc1, int tpc2);
@@ -532,7 +533,7 @@ class Score : public QObject {
       void undoChangeTuning(Note*, qreal);
       void undoChangePageFormat(PageFormat*, qreal spatium, int);
       void undoChangeUserMirror(Note*, MScore::DirectionH);
-      void undoChangeKeySig(Staff* ostaff, int tick, Key);
+      void undoChangeKeySig(Staff* ostaff, int tick, KeySigEvent);
       void undoChangeClef(Staff* ostaff, Segment*, ClefType st);
       void undoChangeBarLine(Measure* m, BarLineType);
       void undoChangeProperty(Element*, P_ID, const QVariant&, PropertyStyle ps = PropertyStyle::NOSTYLE);
@@ -574,6 +575,8 @@ class Score : public QObject {
       Note* addPitch(NoteVal&, bool addFlag);
       void addPitch(int pitch, bool addFlag);
       Note* addNote(Chord*, NoteVal& noteVal);
+
+      NoteVal noteValForPosition(Position pos, bool &error);
 
       void deleteItem(Element*);
       void cmdDeleteSelectedMeasures();
@@ -664,12 +667,12 @@ class Score : public QObject {
       int fileDivision(int t) const { return (t * MScore::division + _fileDivision/2) / _fileDivision; }
       bool saveFile();
 
-      QString filePath() const       { return info.filePath(); }
-      QString absoluteFilePath() const { return info.absoluteFilePath(); }
       QFileInfo* fileInfo()          { return &info; }
-
       QString name() const           { return info.completeBaseName(); }
-      void setName(const QString& s) { info.setFile(s); }
+      void setName(QString s);
+
+      QString importedFilePath() const           { return _importedFilePath; }
+      void setImportedFilePath(const QString& filePath);
 
       bool isSavable() const;
       bool dirty() const;
@@ -733,9 +736,7 @@ class Score : public QObject {
       void pasteSymbols(XmlReader& e, ChordRest* dst);
       void renderMidi(EventMap* events);
       void renderStaff(EventMap* events, Staff*);
-
-      void swingAdjustParams(Chord*, int&, int&, int, int);
-      bool isSubdivided(ChordRest*, int);
+      void renderSpanners(EventMap* events, int staffIdx);
 
       int mscVersion() const    { return _mscVersion; }
       void setMscVersion(int v) { _mscVersion = v; }
@@ -752,6 +753,10 @@ class Score : public QObject {
       void rebuildMidiMapping();
       void updateChannel();
       void updateSwing();
+      void createPlayEvents();
+
+      int midiPortCount() const;
+      void setMidiPortCount(int);
 
       void cmdConcertPitchChanged(bool, bool /*useSharpsFlats*/);
 
@@ -839,10 +844,6 @@ class Score : public QObject {
       void expandVoice(Segment* s, int track);
       void expandVoice();
 
-      int customKeySigIdx(KeySig*) const;
-      int addCustomKeySig(KeySig*);
-      KeySig* customKeySig(int) const;
-      KeySig* keySigFactory(const KeySigEvent&);
       Element* selectMove(const QString& cmd);
       Element* move(const QString& cmd);
       void cmdEnterRest(const TDuration& d);
@@ -887,8 +888,10 @@ class Score : public QObject {
       QByteArray readToBuffer();
       void writeSegments(Xml& xml, int strack, int etrack, Segment* first, Segment* last, bool, bool, bool);
 
-      const QMap<QString, QString>& metaTags() const;
-      QMap<QString, QString>& metaTags();
+      const QMap<QString, QString>& metaTags() const   { return _metaTags; }
+      QMap<QString, QString>& metaTags()               { return _metaTags; }
+      void setMetaTags(const QMap<QString,QString>& t) { _metaTags = t; }
+
       Q_INVOKABLE QString metaTag(const QString& s) const;
       Q_INVOKABLE void setMetaTag(const QString& tag, const QString& val);
 
@@ -960,7 +963,7 @@ class Score : public QObject {
       Q_INVOKABLE void appendMeasures(int);
       Q_INVOKABLE void addText(const QString&, const QString&);
       Q_INVOKABLE Ms::Cursor* newCursor();
-      qreal computeMinWidth(Segment* fs);
+      qreal computeMinWidth(Segment* fs, bool firstMeasureInSystem);
       void updateBarLineSpans(int idx, int linesOld, int linesNew);
 
       const std::multimap<int, Spanner*>& spanner() const { return _spanner.map(); }
@@ -987,8 +990,8 @@ class Score : public QObject {
       QList<int> uniqueStaves() const;
       void transpositionChanged(Part*);
 
-      void moveUp(Chord*);
-      void moveDown(Chord*);
+      void moveUp(ChordRest*);
+      void moveDown(ChordRest*);
       Element* upAlt(Element*);
       Note* upAltCtrl(Note*) const;
       Element* downAlt(Element*);
@@ -997,9 +1000,20 @@ class Score : public QObject {
       Element* firstElement();
       Element* lastElement();
 
+      QString title();
+
       void cmdInsertClef(Clef* clef, ChordRest* cr);
+
+      void cmdExplode();
+      void cmdImplode();
+      void cmdSlashFill();
+      void cmdSlashRhythm();
+
       void setAccessibleInfo(QString s) { accInfo = s.remove(":").remove(";"); }
       QString accessibleInfo()          { return accInfo;          }
+
+      QImage createThumbnail();
+      QString createRehearsalmarkText(int tick) const;
 
       friend class ChangeSynthesizerState;
       friend class Chord;

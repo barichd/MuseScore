@@ -38,6 +38,8 @@ class Palette;
 //---------------------------------------------------------
 
 struct PaletteCell {
+      ~PaletteCell();
+
       Element* element { 0 };
       QString name;           // used for tool tip
       QString tag;
@@ -178,7 +180,7 @@ class Palette : public QWidget {
       bool systemPalette() const     { return _systemPalette; }
       void setSystemPalette(bool val);
 
-      void setMag(qreal val)         { extraMag = val;     }
+      void setMag(qreal val);
       qreal mag() const              { return extraMag;    }
       void setYOffset(qreal val)     { _yOffset = val;     }
       qreal yOffset() const          { return _yOffset;        }

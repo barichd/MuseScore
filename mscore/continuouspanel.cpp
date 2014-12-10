@@ -35,6 +35,7 @@ namespace Ms {
 ContinuousPanel::ContinuousPanel(ScoreView* sv)
       {
       _sv                     = sv;
+      _active                 = true;
       _visible                = false;
       _width                  = 0.0;
       _oldWidth               = 0.0;
@@ -45,6 +46,7 @@ ContinuousPanel::ContinuousPanel(ScoreView* sv)
       _x                      = 0.0;
       _y                      = 0.0;
       _heightName             = 0.0;
+      _lineHeightName         = 0.0;
       _widthClef              = 0.0;
       _widthKeySig            = 0.0;
       _widthTimeSig           = 0.0;
@@ -65,11 +67,16 @@ ContinuousPanel::ContinuousPanel(ScoreView* sv)
 
 void ContinuousPanel::paint(const QRect& /*r*/, QPainter& p)
       {
-      if (!_visible)
+      if (!_active) {
+            _visible = false;
             return;
+            }
+
       Measure* measure = _score->tick2measure(0);
-      if (measure == 0)
+      if (measure == 0){
+            _visible = false;
             return;
+            }
 
       if (measure->mmRest()) {
             measure = measure->mmRest();
@@ -77,8 +84,10 @@ void ContinuousPanel::paint(const QRect& /*r*/, QPainter& p)
             }
 
       System* system = measure->system();
-            if (system == 0)
+            if (system == 0) {
+                  _visible = false;
                   return;
+                  }
 
       Segment* s = _score->tick2segment(0);
       double _spatium = _score->spatium();
@@ -87,15 +96,9 @@ void ContinuousPanel::paint(const QRect& /*r*/, QPainter& p)
             _width  = s->x();
 
       //
-      // Don't show panel if staff names are visible
-      //
-      if (_sv->xoffset() / _sv->mag() + _width >= 0)
-           return;
-
-      //
       // Set panel height for whole system
       //
-      _height  = 6 * _spatium;
+      _height = 6 * _spatium;
       _y = system->staffYpage(0) + system->page()->pos().y();
       double y2 = 0.0;
       for (int i = 0; i < _score->nstaves(); ++i) {
@@ -115,8 +118,10 @@ void ContinuousPanel::paint(const QRect& /*r*/, QPainter& p)
       //qDebug() << "width=" << _width << "_y="<< _y << "_offsetPanel=" << _offsetPanel << "_sv->xoffset()" << _sv->xoffset() << "_sv->mag()" << _sv->mag() <<"_spatium" << _spatium << "s->canvasPos().x()" << s->canvasPos().x() << "s->x()" << s->x();
       Page* page = _score->pages().front();
       QList<Element*> elementsCurrent = page->items(_rect);
-      if (elementsCurrent.empty())
+      if (elementsCurrent.empty()) {
+            _visible = false;
             return;
+            }
       qStableSort(elementsCurrent.begin(), elementsCurrent.end(), elementLessThan);
 
       _currentMeasure = nullptr;
@@ -148,7 +153,17 @@ void ContinuousPanel::paint(const QRect& /*r*/, QPainter& p)
       if (_currentMeasure == nullptr)
             return;
       findElementWidths(elementsCurrent);
+
+      //
+      // Don't show panel if staff names are visible
+      if (_sv->xoffset() / _sv->mag() + _xPosMeasure > 0) {
+            _visible = false;
+            return;
+            }
+      //qDebug() << "_sv->xoffset()=" <<_sv->xoffset() << " _sv->mag()="<< _sv->mag() <<" s->x=" << s->x() << " width=" << _width << " currentMeasue=" << _currentMeasure->x() << " _xPosMeasure=" << _xPosMeasure;
+
       draw(p, elementsCurrent);
+      _visible = true;
       }
 
 
@@ -162,6 +177,7 @@ void ContinuousPanel::findElementWidths(const QList<Element*>& el) {
       // The first pass serves to get the maximum width for each elements
       //
       _heightName = 0;
+      _lineHeightName = 0;
       _widthClef = 0;
       _widthKeySig = 0;
       _widthTimeSig = 0;
@@ -206,7 +222,7 @@ void ContinuousPanel::findElementWidths(const QList<Element*>& el) {
                   // Find maximum width for the current KeySignature
                   //
                   KeySig* newKs = new KeySig(_score);
-                  KeySigEvent currentKeySigEvent = currentStaff->key(_currentMeasureTick);
+                  KeySigEvent currentKeySigEvent = currentStaff->keySigEvent(_currentMeasureTick);
                   newKs->setKeySigEvent(currentKeySigEvent);
                   // The Parent and the Track must be set to have the key signature layout adjusted to different clefs
                   // This also adds naturals to the key signature (if set in the score style)
@@ -232,6 +248,9 @@ void ContinuousPanel::findElementWidths(const QList<Element*>& el) {
 
                   if ((newName->height() > _heightName) && (newName->text() != ""))
                         _heightName = newName->height();
+
+                  if ((newName->lineHeight() > _lineHeightName) && (newName->text() != ""))
+                        _lineHeightName = newName->lineHeight();
 
                   if (newClef->width() > _widthClef)
                         _widthClef = newClef->width();
@@ -334,7 +353,19 @@ void ContinuousPanel::draw(QPainter& painter, const QList<Element*>& el) {
 
            if (e->type() == Element::Type::STAFF_LINES) {
                   Staff* currentStaff = _score->staff(e->staffIdx());
-                  Segment* parent = _score->tick2segment(_currentMeasureTick);
+                  Segment* parent = _score->tick2segmentMM(_currentMeasureTick);
+
+                  //
+                  // Get barline height (used to center instrument name
+                  //
+                  BarLine* newBarLine = new BarLine(_score);
+                  newBarLine->setBarLineType(BarLineType::NORMAL);
+                  newBarLine->setParent(parent);
+                  newBarLine->setTrack(e->track());
+                  newBarLine->setSpan(currentStaff->barLineSpan());
+                  newBarLine->setSpanFrom(currentStaff->barLineFrom());
+                  newBarLine->setSpanTo(currentStaff->barLineTo());
+                  newBarLine->layout();
 
                   //
                   // Draw the current staff name
@@ -353,14 +384,14 @@ void ContinuousPanel::draw(QPainter& painter, const QList<Element*>& el) {
                   newName->layout();
                   pos = QPointF (_offsetPanel, e->pagePos().y());
                   painter.translate(pos);
-                  //qDebug() << "_heightName=" << _heightName << "  newName->height=" << newName->height() << "  staff (e->height)=" << e->height() << "  newName->width()=" << newName->width() << "  newName->linespace()=" << newName->lineSpacing() << "  newName->lineHeight()=" << newName->lineHeight();
 
-                  if (currentStaff->primaryStaff()) {
+                  //if (currentStaff->part()->startTrack() == currentStaff->idx() * VOICES) {
+                  if (currentStaff->part()->staff(0) == currentStaff) {
                         painter.rotate(-90);
-                        int nbLines = newName->height() / newName->lineHeight();
-                        pos = QPointF (-e->height() + (e->height() - newName->width()) / 2, _heightName - (_heightName - _heightName / nbLines) - newName->lineSpacing() * 0.1);  // Because we rotate the canvas, height and width are swaped
+                        pos = QPointF (- newBarLine->height() / 2 - newName->width() / 2, _heightName - newName->height() + _lineHeightName * 0.8);  // Because we rotate the canvas, height and width are swaped
                         painter.translate(pos);
                         newName->draw(&painter);
+                        //qDebug() << "_heightName=" << _heightName << "Barline height=" << newBarLine->height() << "  newName->height=" << newName->height() << "  staff (e->height)=" << e->height() << "  newName->width()=" << newName->width() << "  newName->linespace()=" << newName->lineSpacing() << "  newName->lineHeight()=" << newName->lineHeight() << " pos (" << pos.x() << "," << pos.y() << ")";
                         painter.translate(-pos);
                         painter.rotate(90);
                   }
@@ -382,14 +413,6 @@ void ContinuousPanel::draw(QPainter& painter, const QList<Element*>& el) {
                   //
                   // Draw barline
                   //
-                  BarLine* newBarLine = new BarLine(_score);
-                  newBarLine->setBarLineType(BarLineType::NORMAL);
-                  newBarLine->setParent(parent);
-                  newBarLine->setTrack(e->track());
-                  newBarLine->setSpan(currentStaff->barLineSpan());
-                  newBarLine->setSpanFrom(currentStaff->barLineFrom());
-                  newBarLine->setSpanTo(currentStaff->barLineTo());
-                  newBarLine->layout();
                   newBarLine->draw(&painter);
                   delete newBarLine;
 
@@ -413,7 +436,7 @@ void ContinuousPanel::draw(QPainter& painter, const QList<Element*>& el) {
                   // Draw the current KeySignature
                   //
                   KeySig* newKs = new KeySig(_score);
-                  KeySigEvent currentKeySigEvent = currentStaff->key(_currentMeasureTick);
+                  KeySigEvent currentKeySigEvent = currentStaff->keySigEvent(_currentMeasureTick);
                   newKs->setKeySigEvent(currentKeySigEvent);
 
                   // The Parent and the track must be set to have the key signature layout adjusted to different clefs

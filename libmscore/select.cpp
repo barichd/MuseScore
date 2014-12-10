@@ -78,11 +78,9 @@ int Selection::tickStart() const
       switch (_state) {
             case SelState::RANGE:
                   return _startSegment->tick();
-                  break;
             case SelState::LIST: {
                   ChordRest* cr = firstChordRest();
                   return (cr) ? cr->tick() : -1;
-                  break;
                   }
             default:
                   return -1;
@@ -140,6 +138,19 @@ bool Selection::isEndActive() const {
 Element* Selection::element() const
       {
       return _el.size() == 1 ? _el[0] : 0;
+      }
+//---------------------------------------------------------
+//   cr
+//---------------------------------------------------------
+
+ChordRest* Selection::cr() const
+      {
+      Element* e = element();
+      if (e->type() == Element::Type::NOTE)
+            e = e->parent();
+      if (e->isChordRest())
+            return static_cast<ChordRest*>(e);
+      return 0;
       }
 
 //---------------------------------------------------------
@@ -209,13 +220,12 @@ ChordRest* Selection::lastChordRest(int track) const
             Element* el = _el[0];
             if (el && el->type() == Element::Type::NOTE)
                   return static_cast<ChordRest*>(el->parent());
-            else if (el->type() == Element::Type::CHORD || el->type() == Element::Type::REST)
+            else if (el->type() == Element::Type::CHORD || el->type() == Element::Type::REST || el->type() == Element::Type::REPEAT_MEASURE)
                   return static_cast<ChordRest*>(el);
             return 0;
             }
       ChordRest* cr = 0;
-      for (auto i = _el.begin(); i != _el.end(); ++i) {
-            Element* el = *i;
+      for (auto el : _el) {
             if (el->type() == Element::Type::NOTE)
                   el = ((Note*)el)->chord();
             if (el->isChordRest() && static_cast<ChordRest*>(el)->segment()->segmentType() == Segment::Type::ChordRest) {
@@ -259,15 +269,31 @@ void Selection::deselectAll()
       }
 
 //---------------------------------------------------------
+//   changeSelection
+//---------------------------------------------------------
+
+static QRectF changeSelection(Element* e, bool b)
+      {
+      QRectF r = e->canvasBoundingRect();
+      e->setSelected(b);
+      r |= e->canvasBoundingRect();
+      return r;
+      }
+
+//---------------------------------------------------------
 //   clear
 //---------------------------------------------------------
 
 void Selection::clear()
       {
-      foreach(Element* e, _el) {
-            _score->addRefresh(e->canvasBoundingRect());
-            e->setSelected(false);
-            _score->addRefresh(e->canvasBoundingRect());
+      for (Element* e : _el) {
+            if (e->isSpanner()) {   // TODO: only visible elements should be selectable?
+                  Spanner* sp = static_cast<Spanner*>(e);
+                  for (auto s : sp->spannerSegments())
+                        e->score()->addRefresh(changeSelection(s, false));
+                  }
+            else
+                  e->score()->addRefresh(changeSelection(e, false));
             }
       _el.clear();
       _startSegment  = 0;
@@ -286,6 +312,7 @@ void Selection::clear()
 void Selection::remove(Element* el)
       {
       _el.removeOne(el);
+      qDebug("deselect1 %p <%s>", el, el->name());
       el->setSelected(false);
       updateState();
       }
@@ -428,6 +455,13 @@ void Selection::updateSelectedElements()
             for (Segment* s = _startSegment; s && (s != _endSegment); s = s->next1MM()) {
                   if (s->segmentType() == Segment::Type::EndBarLine)  // do not select end bar line
                         continue;
+                  foreach(Element* e, s->annotations()) {
+                        if (e->track() != st)
+                              continue;
+                        if (e->systemFlag()) //exclude system text
+                              continue;
+                        appendFiltered(e);
+                        }
                   Element* e = s->element(st);
                   if (!e)
                         continue;
@@ -453,13 +487,6 @@ void Selection::updateSelectedElements()
                   else {
                         appendFiltered(e);
                         }
-                  foreach(Element* e, s->annotations()) {
-                        if (e->track() < startTrack || e->track() >= endTrack)
-                              continue;
-                        if (e->systemFlag()) //exclude system text
-                              continue;
-                        appendFiltered(e);
-                        }
                   }
             }
       int stick = startSegment()->tick();
@@ -472,7 +499,7 @@ void Selection::updateSelectedElements()
                   continue;
             if (sp->type() == Element::Type::SLUR) {
                 if ((sp->tick() >= stick && sp->tick() < etick) || (sp->tick2() >= stick && sp->tick2() < etick))
-                      if (canSelect(sp->startChord()) && canSelect(sp->endChord()))
+                      if (canSelect(sp->startCR()) && canSelect(sp->endCR()))
                         appendFiltered(sp); // slur with start or end in range selection
             }
             else if ((sp->tick() >= stick && sp->tick() < etick) && (sp->tick2() >= stick && sp->tick2() <= etick))
@@ -504,7 +531,7 @@ void Selection::setRange(Segment* startSegment, Segment* endSegment, int staffSt
 
 void Selection::update()
       {
-      foreach (Element* e, _el)
+      for (Element* e : _el)
             e->setSelected(true);
       updateState();
       }
@@ -637,7 +664,12 @@ QByteArray Selection::staffMimeData() const
 
       int ticks  = tickEnd() - tickStart();
       int staves = staffEnd() - staffStart();
-      xml.stag(QString("StaffList version=\"" MSC_VERSION "\" tick=\"%1\" len=\"%2\" staff=\"%3\" staves=\"%4\"").arg(tickStart()).arg(ticks).arg(staffStart()).arg(staves));
+      if (!MScore::testMode) {
+            xml.stag(QString("StaffList version=\"" MSC_VERSION "\" tick=\"%1\" len=\"%2\" staff=\"%3\" staves=\"%4\"").arg(tickStart()).arg(ticks).arg(staffStart()).arg(staves));
+            }
+      else {
+            xml.stag(QString("StaffList version=\"2.00\" tick=\"%1\" len=\"%2\" staff=\"%3\" staves=\"%4\"").arg(tickStart()).arg(ticks).arg(staffStart()).arg(staves));
+            }
       Segment* seg1 = _startSegment;
       Segment* seg2 = _endSegment;
 
@@ -1131,6 +1163,7 @@ void Selection::extendRangeSelection(Segment* seg, Segment* segAfter, int staffI
                   }
             }
       activeIsFirst ? _activeSegment = _startSegment : _activeSegment = _endSegment;
+      _score->setSelectionChanged(true);
       }
 
 //---------------------------------------------------------

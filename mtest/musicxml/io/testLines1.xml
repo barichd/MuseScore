@@ -19,6 +19,7 @@
       <score-instrument id="P1-I3">
         <instrument-name>Guitar</instrument-name>
         </score-instrument>
+      <midi-device id="P1-I3" port="1"></midi-device>
       <midi-instrument id="P1-I3">
         <midi-channel>1</midi-channel>
         <midi-program>1</midi-program>
@@ -56,7 +57,7 @@
         </note>
       <direction placement="above">
         <direction-type>
-          <octave-shift type="down" size="8"/>
+          <octave-shift type="down" size="8" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -81,7 +82,7 @@
         </note>
       <direction placement="above">
         <direction-type>
-          <octave-shift type="stop" size="8"/>
+          <octave-shift type="stop" size="8" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -108,7 +109,7 @@
         </note>
       <direction placement="below">
         <direction-type>
-          <octave-shift type="up" size="8"/>
+          <octave-shift type="up" size="8" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -133,7 +134,7 @@
         </note>
       <direction placement="below">
         <direction-type>
-          <octave-shift type="stop" size="8"/>
+          <octave-shift type="stop" size="8" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -160,7 +161,7 @@
         </note>
       <direction placement="below">
         <direction-type>
-          <octave-shift type="up" size="15"/>
+          <octave-shift type="up" size="15" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -195,7 +196,7 @@
         </note>
       <direction placement="below">
         <direction-type>
-          <octave-shift type="stop" size="15"/>
+          <octave-shift type="stop" size="15" number="1"/>
           </direction-type>
         </direction>
       </measure>
@@ -212,7 +213,7 @@
         </note>
       <direction placement="above">
         <direction-type>
-          <octave-shift type="down" size="15"/>
+          <octave-shift type="down" size="15" number="1"/>
           </direction-type>
         </direction>
       <note>
@@ -247,7 +248,7 @@
         </note>
       <direction placement="above">
         <direction-type>
-          <octave-shift type="stop" size="15"/>
+          <octave-shift type="stop" size="15" number="1"/>
           </direction-type>
         </direction>
       </measure>
@@ -316,7 +317,7 @@
         <notations>
           <ornaments>
             <trill-mark/>
-            <wavy-line type="start"/>
+            <wavy-line type="start" number="1"/>
             </ornaments>
           </notations>
         </note>
@@ -341,7 +342,7 @@
         <stem>down</stem>
         <notations>
           <ornaments>
-            <wavy-line type="stop"/>
+            <wavy-line type="stop" number="1"/>
             </ornaments>
           </notations>
         </note>

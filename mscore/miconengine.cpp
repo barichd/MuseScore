@@ -123,27 +123,27 @@ void MIconEnginePrivate::loadDataForModeAndState(QSvgRenderer* renderer, QIcon::
                   if (mode == QIcon::Disabled) {
                         if (Ms::preferences.globalStyle == Ms::MuseScoreStyleType::LIGHT) {
                               if (state == QIcon::On)
-                                    ba.replace("fill:#ffffff", "fill:#8daac7");
+                                    ba.replace("fill:#3b3f45", "fill:#8daac7");
                               else
-                                    ba.replace("fill:#ffffff", "fill:#a0a0a0");
+                                    ba.replace("fill:#3b3f45", "fill:#a0a0a0");
                               }
                         else {
                               if (state == QIcon::On)
-                                    ba.replace("fill:#ffffff", "fill:#4171a2");
-                              else
-                                    ba.replace("fill:#ffffff", "fill:#808080");
+                                    ba.replace("fill:#3b3f45", "fill:#4171a2");
+			      else
+                                    ba.replace("fill:#3b3f45", "fill:#a0a0a0");
                               }
                         }
                   else {
                         if (Ms::preferences.globalStyle == Ms::MuseScoreStyleType::LIGHT) {
                               if (state == QIcon::On)
-                                    ba.replace("fill:#ffffff", "fill:#4171a2");
-                              else
-                                    ba.replace("fill:#ffffff", "fill:#2e3136");
+                                    ba.replace("fill:#3b3f45", "fill:#4171a2");
                               }
                         else {
                               if (state == QIcon::On)
-                                    ba.replace("fill:#ffffff", "fill:#78afe6");
+                                    ba.replace("fill:#3b3f45", "fill:#78afe6");
+			      else
+				    ba.replace("fill:#3b3f45", "fill:#eff0f1");
                               }
                         }
                   renderer->load(ba);
@@ -151,27 +151,17 @@ void MIconEnginePrivate::loadDataForModeAndState(QSvgRenderer* renderer, QIcon::
             }
       }
 
-#if 0 // yet(?) unused
-//---------------------------------------------------------
-//   qt_intensity
-//---------------------------------------------------------
-
-static inline uint qt_intensity(uint r, uint g, uint b)
-      {
-      // 30% red, 59% green, 11% blue
-      return (77 * r + 150 * g + 28 * b) / 255;
-      }
-
 //---------------------------------------------------------
 //   pixmap
 //---------------------------------------------------------
-#endif
 
 QPixmap MIconEngine::pixmap(const QSize &size, QIcon::Mode mode, QIcon::State state)
       {
       QPixmap pm;
 
       QString pmckey(d->pmcKey(size, mode, state));
+      pmckey.prepend("Ms");
+
       if (QPixmapCache::find(pmckey, pm))
             return pm;
 
@@ -196,6 +186,7 @@ QPixmap MIconEngine::pixmap(const QSize &size, QIcon::Mode mode, QIcon::State st
       renderer.render(&p);
       p.end();
       pm = QPixmap::fromImage(img);
+
       if (!pm.isNull())
             QPixmapCache::insert(pmckey, pm);
       return pm;
@@ -256,7 +247,7 @@ void MIconEngine::paint(QPainter *painter, const QRect &rect, QIcon::Mode mode, 
 
 QString MIconEngine::key() const
       {
-      return QLatin1String("svg");
+      return QLatin1String("micon-svg");
       }
 
 //---------------------------------------------------------

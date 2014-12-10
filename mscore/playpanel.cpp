@@ -49,6 +49,7 @@ PlayPanel::PlayPanel(QWidget* parent)
       tempoSliderIsPressed = false;
       setupUi(this);
       setWindowFlags(this->windowFlags() & ~Qt::WindowContextHelpButtonHint);
+      setWindowFlags(this->windowFlags() | Qt::WindowStaysOnTopHint);
 
       QSettings settings;
       restoreGeometry(settings.value("playPanel/geometry").toByteArray());
@@ -184,7 +185,7 @@ void PlayPanel::setEndpos(int val)
 void PlayPanel::setTempo(double val)
       {
       int tempo = lrint(val * 60.0);
-      tempoLabel->setText(QString("%1 bpm").arg(tempo, 3, 10, QLatin1Char(' ')));
+      tempoLabel->setText(QString("%1 BPM").arg(tempo, 3, 10, QLatin1Char(' ')));
       }
 
 //---------------------------------------------------------
@@ -194,7 +195,6 @@ void PlayPanel::setTempo(double val)
 void PlayPanel::setRelTempo(qreal val)
       {
       val *= 100;
-      //relTempo->setText(QString("%1 %").arg(val, 3, 'f', 0));
       relTempoBox->setValue(val);
       tempoSlider->setValue(val);
       }
