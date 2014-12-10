@@ -932,7 +932,7 @@ void ChordRest::setDurationType(const TDuration& v)
 
 QString ChordRest::durationUserName()
       {
-      QString duration = tr("Duration");
+      QString duration = tr("");
       QString tupletType = "";
       if(tuplet()) {
               switch (tuplet()->ratio().numerator()) {

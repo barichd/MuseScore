@@ -27,7 +27,7 @@ QRect AccessibleScoreView::rect() const{
       return s->rect();
       }
 QAccessible::Role AccessibleScoreView::role() const{
-      return QAccessible::NoRole;
+      return QAccessible::Canvas;
       }
 
 QString AccessibleScoreView::text(QAccessible::Text t) const {
