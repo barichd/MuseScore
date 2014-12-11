@@ -487,7 +487,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
 
    public:
       MuseScore();
-      ~MuseScore() {}
+      ~MuseScore();
       bool checkDirty(Score*);
       PlayPanel* getPlayPanel() const { return playPanel; }
       QMenu* genCreateMenu(QWidget* parent = 0);
@@ -527,7 +527,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
 
       QString lastSaveCopyDirectory;
       QString lastSaveDirectory;
-      SynthControl* getSynthControl() const { return synthControl; }
+      SynthControl* getSynthControl() const       { return synthControl; }
       void editInPianoroll(Staff* staff);
       void editInDrumroll(Staff* staff);
       PianorollEditor* getPianorollEditor() const { return pianorollEditor; }
@@ -607,7 +607,7 @@ class MuseScore : public QMainWindow, public MuseScoreCore {
       bool saveSelection(Score*);
       void addImage(Score*, Element*);
 
-      bool savePng(Score*, const QString& name, bool screenshot, bool transparent, double convDpi, QImage::Format format);
+      bool savePng(Score*, const QString& name, bool screenshot, bool transparent, double convDpi, int trimMargin, QImage::Format format);
       bool saveAudio(Score*, const QString& name);
       bool saveMp3(Score*, const QString& name);
       bool saveSvg(Score*, const QString& name);
