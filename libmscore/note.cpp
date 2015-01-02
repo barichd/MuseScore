@@ -1796,15 +1796,15 @@ QString Note::noteTypeUserName()
             case NoteType::GRACE8_AFTER:
             case NoteType::GRACE16_AFTER:
             case NoteType::GRACE32_AFTER:
-                  return tr("Grace note after");
+                  return tr("Grace after");
             case NoteType::GRACE4:
             case NoteType::GRACE16:
             case NoteType::GRACE32:
-                  return tr("Grace note before");
+                  return tr("Grace before");
             case NoteType::INVALID:
-                  return tr("Invalid note");
+                  return tr("Invalid");
             default:
-                  return tr("Note");
+                  return tr("");
             }
       }
 
