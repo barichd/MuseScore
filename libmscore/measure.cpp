@@ -550,12 +550,13 @@ void Measure::layout2()
                   ChordRest* cr = s->cr(track);
                   if (!cr)
                         continue;
-                  int n = cr->lyricsList().size();
+/* Lyrics line segments are now Spanner's belonging to System's: System takes care of them
+                   int n = cr->lyricsList().size();
                   for (int i = 0; i < n; ++i) {
                         Lyrics* lyrics = cr->lyricsList().at(i);
                         if (lyrics)
                               system()->layoutLyrics(lyrics, s, track/VOICES);
-                        }
+                        } */
                   }
             if (track % VOICES == 0) {
                   int staffIdx = track / VOICES;
@@ -977,6 +978,15 @@ void Measure::change(Element* o, Element* n)
             remove(o);
             add(n);
             }
+      }
+
+//---------------------------------------------------------
+//   spatiumChanged
+//---------------------------------------------------------
+
+void Measure::spatiumChanged(qreal /*oldValue*/, qreal /*newValue*/)
+      {
+      setDirty();
       }
 
 //-------------------------------------------------------------------
@@ -1797,7 +1807,7 @@ void Measure::read(XmlReader& e, int staffIdx)
             const QStringRef& tag(e.name());
 
             if (tag == "tick") {
-                  e.initTick(e.readInt());
+                  e.initTick(score()->fileDivision(e.readInt()));
                   lastTick = e.tick();
                   }
             else if (tag == "BarLine") {
@@ -2401,9 +2411,8 @@ void Measure::scanElements(void* data, void (*func)(void*, Element*), bool all)
                   func(data, ms->noText());
             }
 
-      for (Segment* s = first(); s; s = s->next()) {
-            s->scanElements(data,func,all);
-            }
+      for (Segment* s = first(); s; s = s->next())
+            s->scanElements(data, func, all);
       }
 
 //---------------------------------------------------------

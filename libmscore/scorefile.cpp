@@ -290,7 +290,7 @@ void Score::readStaff(XmlReader& e)
                         measures()->add(mb);
                         }
                   else if (tag == "tick")
-                        e.initTick(e.readInt());
+                        e.initTick(fileDivision(e.readInt()));
                   else
                         e.unknown();
                   }
@@ -320,7 +320,7 @@ void Score::readStaff(XmlReader& e)
                               }
                         }
                   else if (tag == "tick")
-                        e.initTick(e.readInt());
+                        e.initTick(fileDivision(e.readInt()));
                   else
                         e.unknown();
                   }
@@ -1374,6 +1374,10 @@ void Score::writeSegments(Xml& xml, int strack, int etrack,
                         for (auto i = spanner().begin(); i != endIt; ++i) {
                               Spanner* s = i->second;
                               if (s->generated() || !xml.canWrite(s))
+                                    continue;
+
+                              // don't write voltas to clipboard
+                              if (clip && s->type() == Element::Type::VOLTA)
                                     continue;
 
                               if (s->track() == track) {

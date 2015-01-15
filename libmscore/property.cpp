@@ -44,8 +44,8 @@ static const PropertyData propertyList[] = {
       { P_ID::SHOW_COURTESY,       false, "showCourtesy",  P_TYPE::INT   },
       { P_ID::LINE_TYPE,           false, "lineType",      P_TYPE::INT   },
       { P_ID::PITCH,               true,  "pitch",         P_TYPE::INT   },
-      { P_ID::TPC1,                false, "tpc",           P_TYPE::INT   },
-      { P_ID::TPC2,                false, "tpc2",          P_TYPE::INT   },
+      { P_ID::TPC1,                true,  "tpc",           P_TYPE::INT   },
+      { P_ID::TPC2,                true,  "tpc2",          P_TYPE::INT   },
 
       { P_ID::LINE,                false, "line",          P_TYPE::INT   },
       { P_ID::FIXED,               false, "fixed",         P_TYPE::BOOL  },
@@ -211,6 +211,7 @@ static const PropertyData propertyList[] = {
       { P_ID::LINE_VISIBLE,        true,  "lineVisible",           P_TYPE::BOOL },
 
       { P_ID::SYSTEM_INITIAL_BARLINE_TYPE, false, "sysInitBarLineType", P_TYPE::INT },
+      { P_ID::MAG,                 false, "mag",                   P_TYPE::REAL },
 
       { P_ID::END,                 false, "",                      P_TYPE::INT }
       };

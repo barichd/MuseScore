@@ -69,9 +69,10 @@
 #include "inspector/inspector.h"
 #include "omrpanel.h"
 #include "shortcut.h"
+#ifdef SCRIPT_INTERFACE
 #include "pluginCreator.h"
 #include "pluginManager.h"
-// #include "plugins.h"
+#endif
 #include "helpBrowser.h"
 #include "drumtools.h"
 #include "editstafftype.h"
@@ -89,7 +90,6 @@
 
 #include "driver.h"
 
-// #include "effects/freeverb/freeverb.h"
 #include "effects/zita1/zita.h"
 #include "effects/noeffect/noeffect.h"
 #include "synthesizer/synthesizer.h"
@@ -215,10 +215,10 @@ static QString getSharePath()
 static void printVersion(const char* prog)
       {
 #ifdef MSCORE_UNSTABLE
-      qDebug("%s: Music Score Editor\nUnstable Prerelease for Version %s; Build %s",
+      fprintf(stderr, "%s: Music Score Editor\nUnstable Prerelease for Version %s; Build %s\n",
          prog, VERSION, qPrintable(revision));
 #else
-     qDebug("%s: Music Score Editor; Version %s; Build %s", prog, VERSION, qPrintable(revision));
+      fprintf(stderr, "%s: Music Score Editor; Version %s; Build %s\n", prog, VERSION, qPrintable(revision));
 #endif
       }
 
@@ -325,6 +325,8 @@ void MuseScore::preferencesChanged()
 
       getAction("midi-on")->setEnabled(preferences.enableMidiInput);
       _statusBar->setVisible(preferences.showStatusBar);
+
+      updateNewWizard();
       }
 
 //---------------------------------------------------------
@@ -1238,7 +1240,11 @@ void MuseScore::updateTabNames()
 static void usage()
       {
       printVersion("MuseScore");
+#if defined(Q_OS_WIN)
+      fprintf(stderr, "Usage: MuseScore.exe flags scorefile\n"
+#else
       fprintf(stderr, "Usage: mscore flags scorefile\n"
+#endif
         "   Flags:\n"
         "   -v        print version\n"
         "   -d        debug mode\n"
@@ -1616,6 +1622,7 @@ void MuseScore::showPlayPanel(bool visible)
             connect(synti,     SIGNAL(gainChanged(float)), playPanel, SLOT(setGain(float)));
             playPanel->setGain(synti->gain());
             playPanel->setScore(cs);
+            mscore->stackUnder(playPanel);
             }
       playPanel->setVisible(visible);
       playId->setChecked(visible);
@@ -2382,6 +2389,11 @@ void MuseScore::changeState(ScoreState val)
 
 //      if (_sstate == val)
 //            return;
+
+      // disallow change to edit modes if currently in play mode
+      if (_sstate == STATE_PLAY && (val == STATE_EDIT || val & STATE_ALLTEXTUAL_EDIT || val & STATE_NOTE_ENTRY))
+            return;
+
       static const char* stdNames[] = {
             "note-longa", "note-breve", "pad-note-1", "pad-note-2", "pad-note-4",
       "pad-note-8", "pad-note-16", "pad-note-32", "pad-note-64", "pad-note-128", "pad-rest", "rest"};
@@ -2437,7 +2449,6 @@ void MuseScore::changeState(ScoreState val)
 
       if (getAction("file-part-export")->isEnabled())
             getAction("file-part-export")->setEnabled(cs && cs->rootScore()->excerpts().size() > 0);
-
 
       // disabling top level menu entries does not
       // work for MAC
@@ -4400,7 +4411,6 @@ void MuseScore::pluginTriggered(int) {}
 void MuseScore::loadPlugins() {}
 bool MuseScore::loadPlugin(const QString&) { return false;}
 void MuseScore::unloadPlugins() {}
-QQmlEngine* MuseScore::qml() { return 0; }
 #endif
 
 //---------------------------------------------------------
@@ -4441,6 +4451,7 @@ using namespace Ms;
 
 int main(int argc, char* av[])
       {
+      QApplication::setDesktopSettingsAware(true);
 #if defined(QT_DEBUG) && defined(Q_OS_WIN)
       qInstallMessageHandler(mscoreMessageHandler);
 #endif
@@ -4460,19 +4471,12 @@ int main(int argc, char* av[])
       QCoreApplication::setOrganizationDomain("musescore.org");
       QCoreApplication::setApplicationName("MuseScoreDevelopment");
       QAccessible::installFactory(AccessibleScoreView::ScoreViewFactory);
+
       Q_INIT_RESOURCE(zita);
-      Q_INIT_RESOURCE(noeffect);
-//      Q_INIT_RESOURCE(freeverb);
 
 #ifndef Q_OS_MAC
-      // Save the preferences in QSettings::NativeFormat
       QSettings::setDefaultFormat(QSettings::IniFormat);
 #endif
-
-      if (!QFontDatabase::supportsThreadedFontRendering()) {
-            qDebug("Your computer does not support threaded font rendering!");
-            exit(-1);
-            }
 
       QStringList argv =  QCoreApplication::arguments();
       argv.removeFirst();
@@ -4603,12 +4607,10 @@ int main(int argc, char* av[])
                         return 0;
                   }
             else
-                  if (app->sendMessage(QString(""))) {
+                  if (app->sendMessage(QString("")))
                       return 0;
-                      }
             }
 
-/**/
       if (dataPath.isEmpty())
             dataPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
 
@@ -4620,8 +4622,7 @@ int main(int argc, char* av[])
 
       // create local plugin directory
       // if not already there:
-      QDir dir;
-      dir.mkpath(dataPath + "/plugins");
+      QDir().mkpath(dataPath + "/plugins");
 
       if (MScore::debugMode)
             qDebug("global share: <%s>", qPrintable(mscoreGlobalShare));

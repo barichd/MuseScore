@@ -1523,7 +1523,8 @@ void AddElement::endUndoRedo(bool isUndo) const
             m->cmdUpdateNotes(element->staffIdx());
             }
       else if (element->type() == Element::Type::KEYSIG) {
-            element->score()->cmdUpdateNotes();
+            if (element->score()->undo()->active())
+                  element->score()->cmdUpdateNotes();
             }
       }
 
@@ -2543,7 +2544,7 @@ void ChangePageFormat::flip()
 //---------------------------------------------------------
 
 ChangeStaff::ChangeStaff(Staff* _staff, bool _small, bool _invisible,
-   qreal _userDist, QColor _color, bool _neverHide, bool _showIfEmpty, qreal _mag)
+   qreal _userDist, QColor _color, bool _neverHide, bool _showIfEmpty, qreal _mag, bool hide)
       {
       staff       = _staff;
       small       = _small;
@@ -2553,6 +2554,7 @@ ChangeStaff::ChangeStaff(Staff* _staff, bool _small, bool _invisible,
       neverHide   = _neverHide;
       showIfEmpty = _showIfEmpty;
       mag         = _mag;
+      hideSystemBarLine = hide;
       }
 
 //---------------------------------------------------------
@@ -2582,6 +2584,7 @@ void ChangeStaff::flip()
       bool oldNeverHide   = staff->neverHide();
       bool oldShowIfEmpty = staff->showIfEmpty();
       qreal oldMag        = staff->userMag();
+      bool hide           = staff->hideSystemBarLine();
 
       staff->setSmall(small);
       staff->setInvisible(invisible);
@@ -2590,6 +2593,7 @@ void ChangeStaff::flip()
       staff->setNeverHide(neverHide);
       staff->setShowIfEmpty(showIfEmpty);
       staff->setUserMag(mag);
+      staff->setHideSystemBarLine(hideSystemBarLine);
 
       small       = oldSmall;
       invisible   = oldInvisible;
@@ -2598,6 +2602,7 @@ void ChangeStaff::flip()
       neverHide   = oldNeverHide;
       showIfEmpty = oldShowIfEmpty;
       mag         = oldMag;
+      hideSystemBarLine = hide;
 
       Score* score = staff->score();
       if (invisibleChanged) {

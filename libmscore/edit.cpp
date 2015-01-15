@@ -1370,7 +1370,7 @@ void Score::cmdFlip()
                         MScore::Direction d = a->up() ? MScore::Direction::DOWN : MScore::Direction::UP;
                         undoChangeProperty(a, P_ID::DIRECTION, int(d));
                         }
-                  return;   // no layoutAll
+                  //return;   // no layoutAll
                   }
             else if (e->type() == Element::Type::TUPLET) {
                   Tuplet* tuplet = static_cast<Tuplet*>(e);
@@ -1393,7 +1393,7 @@ void Score::cmdFlip()
                   undoChangeProperty(e, P_ID::PLACEMENT, int(p));
                   }
             }
-      _layoutAll = true;      // must be set in und/redo
+      _layoutAll = true;      // must be set in undo/redo
       }
 
 //---------------------------------------------------------
@@ -1668,6 +1668,7 @@ void Score::deleteItem(Element* el)
             case Element::Type::VOLTA_SEGMENT:
             case Element::Type::SLUR_SEGMENT:
             case Element::Type::PEDAL_SEGMENT:
+//            case Element::Type::LYRICSLINE_SEGMENT:
                   el = static_cast<SpannerSegment*>(el)->spanner();
 
             default:

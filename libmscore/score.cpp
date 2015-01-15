@@ -1525,6 +1525,7 @@ void Score::removeElement(Element* element)
             case Element::Type::PEDAL:
             case Element::Type::TEXTLINE:
             case Element::Type::HAIRPIN:
+//            case Element::Type::LYRICSLINE:
                   {
                   Spanner* spanner = static_cast<Spanner*>(element);
                   if (et == Element::Type::TEXTLINE && spanner->anchor() == Spanner::Anchor::NOTE)
@@ -1562,6 +1563,8 @@ void Score::removeElement(Element* element)
                   ChordRest* cr = static_cast<ChordRest*>(element);
                   if (cr->beam())
                         cr->beam()->remove(cr);
+                  for (Lyrics* lyr : cr->lyricsList())
+                        lyr->removeFromScore();
                   // TODO: check for tuplet?
                   }
                   break;
@@ -1772,8 +1775,15 @@ int Score::inputPos() const
 
 void Score::scanElements(void* data, void (*func)(void*, Element*), bool all)
       {
-      for (MeasureBase* m = first(); m; m = m->next())
-            m->scanElements(data, func, all);
+      for (MeasureBase* mb = first(); mb; mb = mb->next()) {
+            mb->scanElements(data, func, all);
+            if (mb->type() == Element::Type::MEASURE) {
+                  Measure* m = static_cast<Measure*>(mb);
+                  Measure* mmr = m->mmRest();
+                  if (mmr)
+                        mmr->scanElements(data, func, all);
+                  }
+            }
       for (Page* page : pages())
             page->scanElements(data, func, all);
       }
@@ -1785,8 +1795,14 @@ void Score::scanElements(void* data, void (*func)(void*, Element*), bool all)
 void Score::scanElementsInRange(void* data, void (*func)(void*, Element*), bool all)
       {
       Segment* startSeg = _selection.startSegment();
-      for (Segment* s = startSeg; s && s!=_selection.endSegment(); s = s->next1MM()) {
-            s->scanElements(data,func,all);
+      for (Segment* s = startSeg; s && s !=_selection.endSegment(); s = s->next1()) {
+            s->scanElements(data, func, all);
+            Measure* m = s->measure();
+            if (m && s == m->first()) {
+                  Measure* mmr = m->mmRest();
+                  if (mmr)
+                        mmr->scanElements(data, func, all);
+                  }
             }
       }
 
@@ -2082,7 +2098,7 @@ void Score::removeAudio()
 
 bool Score::appendScore(Score* score)
       {
-      if (parts().size() != score->parts().size() || staves().size() != score->staves().size())
+      if (parts().size() < score->parts().size() || staves().size() < score->staves().size())
             return false;
       TieMap  tieMap;
 
@@ -3450,6 +3466,24 @@ void Score::insertTime(int tick, int len)
             for (Staff* staff : score->staves())
                   staff->insertTime(tick, len);
             }
+      }
+
+//---------------------------------------------------------
+//   addUnmanagedSpanner
+//---------------------------------------------------------
+
+void Score::addUnmanagedSpanner(Spanner* s)
+      {
+      _unmanagedSpanner.insert(s);
+      }
+
+//---------------------------------------------------------
+//   removeSpanner
+//---------------------------------------------------------
+
+void Score::removeUnmanagedSpanner(Spanner* s)
+      {
+      _unmanagedSpanner.erase(s);
       }
 
 //---------------------------------------------------------

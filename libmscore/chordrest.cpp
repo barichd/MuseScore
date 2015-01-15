@@ -604,7 +604,9 @@ void ChordRest::layoutArticulations()
                         y          = chordTopY + stem->stemLen();
                         if (chord->beam())
                               y += score()->styleS(StyleIdx::beamWidth).val() * _spatium * .5;
-                        x          = stem->pos().x();
+                        // aligning horizontally to stem makes sense only for staccato
+                        // and only if no other articulations on this side
+                        //x = stem->pos().x();
                         int line   = lrint((y+0.5*_spatium) / _spatium);
                         if (line <= 4)    // align between staff lines
                               y = line * _spatium + _spatium * .5;
@@ -628,7 +630,9 @@ void ChordRest::layoutArticulations()
                         y          = chordBotY + stem->stemLen();
                         if (chord->beam())
                               y -= score()->styleS(StyleIdx::beamWidth).val() * _spatium * .5;
-                        x          = stem->pos().x();
+                        // aligning horizontally to stem makes sense only for staccato
+                        // and only if no other articulations on this side
+                        //x = stem->pos().x();
                         int line   = lrint((y-0.5*_spatium) / _spatium);
                         if (line >= 0)    // align between staff lines
                               y = line * _spatium - _spatium * .5;
@@ -1108,6 +1112,7 @@ void ChordRest::remove(Element* e)
                   for (int i = 0; i < _lyricsList.size(); ++i) {
                         if (_lyricsList[i] != e)
                               continue;
+                        _lyricsList[i]->removeFromScore();
                         _lyricsList[i] = 0;
                         while (!_lyricsList.isEmpty() && _lyricsList.back() == 0)
                               _lyricsList.takeLast();

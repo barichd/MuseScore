@@ -10,9 +10,9 @@
 //  the file LICENCE.GPL
 //=============================================================================
 
+
 #include "pluginCreator.h"
 #include "musescore.h"
-// #include "plugins.h"
 #include "qmlplugin.h"
 #include "icons.h"
 #include "helpBrowser.h"
@@ -323,6 +323,7 @@ void PluginCreator::runClicked()
                   addDockWidget(area, dock);
                   connect(dock, SIGNAL(destroyed()), SLOT(closePlugin()));
                   dock->widget()->setAttribute(Qt::WA_DeleteOnClose);
+                  dock->show();
                   }
             view->show();
             view->raise();

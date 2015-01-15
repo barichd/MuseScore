@@ -265,12 +265,16 @@ NewWizardPage4::NewWizardPage4(QWidget* parent)
       templateFileBrowser = new ScoreBrowser;
       templateFileBrowser->setStripNumbers(true);
       QDir dir(mscoreGlobalShare + "/templates");
-      templateFileBrowser->setScores(dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Readable | QDir::Dirs | QDir::Files, QDir::Name));
+      QFileInfoList fil = dir.entryInfoList(QDir::NoDotAndDotDot | QDir::Readable | QDir::Dirs | QDir::Files, QDir::Name);
+      if(fil.isEmpty()){
+          fil.append(QFileInfo(QFile(":data/Empty_Score.mscz")));
+          }
+      
+      QDir myTemplatesDir(preferences.myTemplatesPath);
+      fil.append(myTemplatesDir.entryInfoList(QDir::NoDotAndDotDot | QDir::Readable | QDir::Dirs | QDir::Files, QDir::Name));
+      
+      templateFileBrowser->setScores(fil);
       templateFileBrowser->setSizePolicy(QSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored));
-
-      QFileInfo myTemplates(preferences.myTemplatesPath);
-      if (myTemplates.isRelative())
-            myTemplates.setFile(QDir::home(), preferences.myTemplatesPath);
 
       QLayout* layout = new QVBoxLayout;
       layout->addWidget(templateFileBrowser);
@@ -346,6 +350,7 @@ NewWizardPage5::NewWizardPage5(QWidget* parent)
       b1->setAccessibleName(title());
       sp = MuseScore::newKeySigPalette();
       sp->setSelectable(true);
+      sp->setDisableDoubleClick(true);
       sp->setSelected(14);
       PaletteScrollArea* sa = new PaletteScrollArea(sp);
       QVBoxLayout* l1 = new QVBoxLayout;

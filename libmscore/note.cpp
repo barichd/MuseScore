@@ -1206,8 +1206,8 @@ void Note::endDrag()
                   Interval interval = staff->part()->instr()->transpose();
                   nPitch += interval.chromatic;
                   }
-            int tpc1   = pitch2tpc(nPitch, key, Prefer::NEAREST);
-            int tpc2   = pitch2tpc(nPitch - transposition(), key, Prefer::NEAREST);
+            int tpc1 = pitch2tpc(nPitch, key, Prefer::NEAREST);
+            int tpc2 = pitch2tpc(nPitch - transposition(), key, Prefer::NEAREST);
             // undefined for non-tablature staves
             Note* n = this;
             while (n->tieBack())
@@ -2142,14 +2142,16 @@ void Note::setNval(const NoteVal& nval, int tick)
       _tpc[0] = nval.tpc1;
       _tpc[1] = nval.tpc2;
 
+      Interval v = staff()->part()->instr()->transpose();
       if (nval.tpc1 == Tpc::TPC_INVALID) {
             if (tick == -1)
                   tick = chord()->tick();
             Key key = staff()->key(tick);
+            if (!concertPitch() && !v.isZero())
+                  key = transposeKey(key, v);
             _tpc[0] = pitch2tpc(nval.pitch, key, Prefer::NEAREST);
             }
       if (nval.tpc2 == Tpc::TPC_INVALID) {
-            Interval v = staff()->part()->instr()->transpose();
             if (v.isZero())
                   _tpc[1] = _tpc[0];
             else {
@@ -2216,22 +2218,23 @@ QVariant Note::getProperty(P_ID propertyId) const
 
 bool Note::setProperty(P_ID propertyId, const QVariant& v)
       {
+      Measure* m = chord() ? chord()->measure() : nullptr;
       switch(propertyId) {
             case P_ID::PITCH:
                   setPitch(v.toInt());
-                  if (chord()->measure())
-                        chord()->measure()->cmdUpdateNotes(chord()->staffIdx());
+                  if (m)
+                        m->cmdUpdateNotes(chord()->staffIdx());
                   score()->setPlaylistDirty(true);
                   break;
             case P_ID::TPC1:
                   _tpc[0] = v.toInt();
-                  if (chord()->measure())
-                        chord()->measure()->cmdUpdateNotes(chord()->staffIdx());
+                  if (m)
+                        m->cmdUpdateNotes(chord()->staffIdx());
                   break;
             case P_ID::TPC2:
                   _tpc[1] = v.toInt();
-                  if (chord()->measure())
-                        chord()->measure()->cmdUpdateNotes(chord()->staffIdx());
+                  if (m)
+                        m->cmdUpdateNotes(chord()->staffIdx());
                   break;
             case P_ID::LINE:
                   _line = v.toInt();

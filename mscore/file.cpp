@@ -451,6 +451,13 @@ QString MuseScore::createDefaultName() const
       return name;
       }
 
+
+void MuseScore::updateNewWizard()
+      {
+      if (newWizard != 0)
+            newWizard = new NewWizard(this);
+      }
+    
 //---------------------------------------------------------
 //   newFile
 //    create new score
@@ -610,12 +617,15 @@ void MuseScore::newFile()
                                     int diff = -part->instr()->transpose().chromatic;
                                     nKey.setKey(transposeKey(nKey.key(), diff));
                                     }
-                              staff->setKey(0, nKey);
-                              KeySig* keysig = new KeySig(score);
-                              keysig->setTrack(staffIdx * VOICES);
-                              keysig->setKeySigEvent(nKey);
-                              Segment* s = measure->getSegment(keysig, 0);
-                              s->add(keysig);
+                              // do not create empty, invisible keysig
+                              if (nKey.custom() || nKey.key() != Key::C) {
+                                    staff->setKey(0, nKey);
+                                    KeySig* keysig = new KeySig(score);
+                                    keysig->setTrack(staffIdx * VOICES);
+                                    keysig->setKeySigEvent(nKey);
+                                    Segment* s = measure->getSegment(keysig, 0);
+                                    s->add(keysig);
+                                    }
                               }
                         }
                   if (staff->primaryStaff()) {

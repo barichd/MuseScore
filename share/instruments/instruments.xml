@@ -7982,6 +7982,16 @@
                   <genre>common</genre>
                   <genre>jazz</genre>
             </Instrument>
+            <Instrument id="banjo-tablature">
+                  <trackName>Banjo [Tablature]</trackName>
+                  <init>banjo</init>
+                  <description>Banjo (Tablature)</description>
+                  <musicXMLid>pluck.banjo</musicXMLid>
+                  <stafftype staffTypePreset="tab5StrCommon">tablature</stafftype>
+<!--                  <clef>TAB</clef> -->
+                  <genre>common</genre>
+                  <genre>jazz</genre>
+            </Instrument>
             <Instrument id="tenor-banjo">
                   <longName>Tenor Banjo</longName>
                   <shortName>T. Bj.</shortName>
@@ -8005,7 +8015,7 @@
             <Instrument id="balalaika">
                   <longName>Balalaika</longName>
                   <shortName>Bal.</shortName>
-                  <trackName> Balalaika</trackName>
+                  <trackName>Balalaika</trackName>
                   <description>Balalaika in fact the prima but a generic for simplicity</description>
                   <musicXMLid>pluck.balalaika</musicXMLid>
                   <StringData>
@@ -8149,6 +8159,12 @@
                   <trackName>Bouzouki (3-course)</trackName>
                   <description>Bouzouki (3-course)</description>
                   <musicXMLid>pluck.bouzouki</musicXMLid>
+                  <StringData>
+                        <frets>27</frets>
+                        <string>50</string>
+                        <string>57</string>
+                        <string>62</string>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>38-89</aPitchRange>
@@ -8164,6 +8180,13 @@
                   <trackName>Bouzouki (4-course)</trackName>
                   <description>Bouzouki (4-course)</description>
                   <musicXMLid>pluck.bouzouki</musicXMLid>
+                  <StringData>
+                        <frets>27</frets>
+                        <string>48</string>
+                        <string>53</string>
+                        <string>57</string>
+                        <string>62</string>
+                  </StringData>
                   <clef>G8vb</clef>
                   <barlineSpan>1</barlineSpan>
                   <aPitchRange>36-89</aPitchRange>
@@ -8677,6 +8700,14 @@
                   <Channel>
                         <program value="24"/>
                   </Channel>
+            </Instrument>
+            <Instrument id="mandolin-tablature">
+                  <trackName>Mandolin [Tablature]</trackName>
+                  <init>mandolin</init>
+                  <description>Mandolin (Tablature)</description>
+                  <musicXMLid>pluck.mandolin</musicXMLid>
+                  <stafftype staffTypePreset="tab4StrCommon">tablature</stafftype>
+<!--                  <clef>TAB</clef> -->
             </Instrument>
             <Instrument id="mandola">
                   <longName>Mandola</longName>

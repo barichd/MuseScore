@@ -29,9 +29,9 @@ include_directories(
       )
 
 if (SCRIPT_INTERFACE)
-      set (SCRIPT_FILES mscorePlugins pluginCreator.cpp qmledit.cpp)
-      set (SCRIPT_MOCS pluginCreator.h qmledit.h)
-      set (SCRIPT_UI   pluginCreator.ui)
+      set (SCRIPT_FILES mscorePlugins pluginCreator.cpp qmledit.cpp pluginManager.cpp)
+      set (SCRIPT_MOCS pluginCreator.h qmledit.h pluginManager.h)
+      set (SCRIPT_UI   pluginCreator.ui pluginManager.ui)
 endif (SCRIPT_INTERFACE)
 
 QT4_WRAP_UI (ui_headers
@@ -45,7 +45,7 @@ QT4_WRAP_UI (ui_headers
       synthcontrol.ui splitstaff.ui cellproperties.ui keyedit.ui selectinstr.ui
       fretdprops.ui editstafftype.ui sectionbreak.ui  bend.ui tremolobar.ui textproperties.ui
       editpitch.ui editstringdata.ui editraster.ui mediadialog.ui textstyle.ui albummanager.ui layer.ui
-      omrpanel.ui startdialog.ui masterpalette.ui pluginManager.ui harmonyedit.ui pathlistdialog.ui
+      omrpanel.ui startdialog.ui masterpalette.ui harmonyedit.ui pathlistdialog.ui
       note_groups.ui resourceManager.ui stafftypetemplates.ui
       startcenter.ui scorePreview.ui scoreBrowser.ui
       logindialog.ui uploadscoredialog.ui breaksdialog.ui
@@ -119,6 +119,7 @@ QT4_WRAP_UI (ui_headers
       inspector/inspector_text.ui
       inspector/inspector_ambitus.ui
       inspector/inspector_empty.ui
+      inspector/inspector_fret.ui
       ${SCRIPT_UI}
       )
 
@@ -151,9 +152,10 @@ QT4_WRAP_CPP (mocs
       inspector/inspectorGroupElement.h inspector/inspectorImage.h waveview.h helpBrowser.h
       inspector/inspectorLasso.h inspector/inspectorVolta.h inspector/inspectorOttava.h
       inspector/inspectorTrill.h
-      inspector/inspectorHairpin.h qmlplugin.h palettebox.h workspace.h pluginManager.h
+      inspector/inspectorHairpin.h qmlplugin.h palettebox.h workspace.h
       inspector/inspectorJump.h inspector/inspectorMarker.h inspector/inspectorGlissando.h
       inspector/inspectorNote.h inspector/inspectorAmbitus.h
+      inspector/inspectorFret.h
       paletteBoxButton.h pathlistdialog.h exampleview.h noteGroups.h inspector/inspectorTextLine.h
       importmidi/importmidi_panel.h importmidi/importmidi_delegate.h importmidi/importmidi_view.h
       debugger/debugger.h
@@ -282,12 +284,13 @@ add_executable ( ${ExecutableName}
       inspector/inspector.cpp dragelement.cpp svggenerator.cpp
       inspector/inspectorBase.cpp inspector/inspectorBeam.cpp masterpalette.cpp
       inspector/inspectorGroupElement.cpp dragdrop.cpp inspector/inspectorImage.cpp
+      inspector/inspectorFret.cpp
       waveview.cpp helpBrowser.cpp inspector/inspectorLasso.cpp
       editelement.cpp inspector/inspectorVolta.cpp inspector/inspectorOttava.cpp
       inspector/inspectorTrill.cpp
       inspector/inspectorHairpin.cpp qmlplugin.cpp editlyrics.cpp
       musicxmlfonthandler.cpp musicxmlsupport.cpp exportxml.cpp importxml.cpp importxmlfirstpass.cpp
-      savePositions.cpp pluginManager.cpp inspector/inspectorJump.cpp inspector/inspectorMarker.cpp
+      savePositions.cpp inspector/inspectorJump.cpp inspector/inspectorMarker.cpp
       inspector/inspectorGlissando.cpp inspector/inspectorNote.cpp inspector/inspectorAmbitus.cpp
       paletteBoxButton.cpp driver.cpp exportmidi.cpp noteGroups.cpp
       pathlistdialog.cpp exampleview.cpp inspector/inspectorTextLine.cpp miconengine.cpp
